@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cool_alert/cool_alert.dart';
 import 'LoginScreen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -20,25 +21,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool isEmailValid = true;
   bool isPasswordValid = true;
   bool isConfirmPasswordValid = true;
+  bool isLoading = false;  // Variable to handle loading state
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    phoneController.dispose();
+    emailController.dispose();
+    passwordController.dispose();
+    confirmPasswordController.dispose();
+    super.dispose();
+  }
 
   Future<void> registerUser() async {
     setState(() {
       isNameValid = nameController.text.trim().isNotEmpty;
-      isPhoneValid = phoneController.text.trim().isNotEmpty;
-      isEmailValid = emailController.text.contains('@');
+      isPhoneValid = RegExp(r'^[0-9]{9,10}$').hasMatch(phoneController.text.trim()); // Phone validation
+      isEmailValid = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(emailController.text.trim()); // Email validation
       isPasswordValid = passwordController.text.length >= 6;
       isConfirmPasswordValid = passwordController.text == confirmPasswordController.text;
     });
 
     if (isNameValid && isPhoneValid && isEmailValid && isPasswordValid && isConfirmPasswordValid) {
+      setState(() {
+        isLoading = true;  // Disable button when loading
+      });
+
       try {
-        // Firebase Auth
+        // Register user in Firebase
         UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: emailController.text.trim(),
           password: passwordController.text.trim(),
         );
 
-        // Firestore
         await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
           'uid': userCredential.user!.uid,
           'name': nameController.text.trim(),
@@ -47,35 +62,51 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'created_at': Timestamp.now(),
         });
 
-        // แสดงข้อความสำเร็จ แล้วเด้งไปหน้า Login
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('สมัครสมาชิกสำเร็จ!')),
+          CoolAlert.show(
+            context: context,
+            type: CoolAlertType.success,
+            title: 'สมัครสมาชิกสำเร็จ',
+            text: 'กำลังไปที่หน้าล็อกอิน...',
+            autoCloseDuration: Duration(seconds: 2),
           );
 
-          // ล้างฟอร์ม
-          nameController.clear();
-          phoneController.clear();
-          emailController.clear();
-          passwordController.clear();
-          confirmPasswordController.clear();
-
-          // รอให้ SnackBar แสดงก่อน แล้วค่อยไปหน้า Login
-          await Future.delayed(Duration(seconds: 2));
-
-          if (mounted) {
+          // Navigate to login screen after a delay
+          Future.delayed(Duration(seconds: 2), () {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => LoginScreen()),
             );
-          }
+          });
         }
+
+        // Clear form fields after successful registration
+        nameController.clear();
+        phoneController.clear();
+        emailController.clear();
+        passwordController.clear();
+        confirmPasswordController.clear();
+
       } on FirebaseAuthException catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(e.message ?? 'เกิดข้อผิดพลาด')),
+        if (e.code == 'email-already-in-use') {
+          CoolAlert.show(
+            context: context,
+            type: CoolAlertType.warning,
+            title: 'อีเมลนี้ถูกใช้แล้ว',
+            text: 'กรุณาใช้อีเมลอื่น',
+          );
+        } else {
+          CoolAlert.show(
+            context: context,
+            type: CoolAlertType.error,
+            title: 'เกิดข้อผิดพลาด',
+            text: e.message ?? 'ไม่สามารถสมัครสมาชิกได้',
           );
         }
+      } finally {
+        setState(() {
+          isLoading = false;  // Re-enable button after processing
+        });
       }
     }
   }
@@ -160,14 +191,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
             SizedBox(height: 20),
             ElevatedButton(
-              onPressed: registerUser,
-              child: Text('สมัครสมาชิก'),
+              onPressed: isLoading ? null : registerUser,  // Disable button when loading
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blueAccent,
-                padding: EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
+                  borderRadius: BorderRadius.circular(12),
                 ),
+              ),
+              child: isLoading
+                  ? CircularProgressIndicator(color: Colors.white)  // Show progress indicator while loading
+                  : Text(
+                      'สมัครสมาชิก',
+                      style: TextStyle(fontSize: 18),
+                    ),
+            ),
+            SizedBox(height: 20),
+            TextButton(
+              onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => LoginScreen()),
+                );
+              },
+              child: Text(
+                'มีบัญชีอยู่แล้ว? เข้าสู่ระบบ',
+                style: TextStyle(color: Colors.blueAccent),
               ),
             ),
           ],

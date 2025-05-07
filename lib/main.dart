@@ -1,8 +1,9 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:run_android/LoginScreen.dart';
-import 'package:run_android/OnboardingScreen.dart';
-import 'package:run_android/SplashScreen.dart';
+import 'package:run_android/Screen/HomeScreen.dart';
+import 'package:run_android/Screen/LoginScreen.dart';
+import 'package:run_android/Screen/OnboardingScreen.dart';
+import 'package:run_android/Screen/SplashScreen.dart';
 // เพิ่ม import
 
 Future<void> main() async {
@@ -17,16 +18,18 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      // เปลี่ยนเป็น false เพื่อไม่ให้แสดงป้าย debug
       title: 'Flutter Demo',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+        
       ),
       initialRoute: '/splash', // เริ่มที่ Onboarding
       routes: {
         '/splash': (context) => SplashScreen(),
         '/onboarding': (context) => OnboardingScreen(),
         '/login': (context) => LoginScreen(), // แก้ชื่อให้ตรงกับไฟล์ของคุณ
+        '/home': (context) => HomeScreen(), // แก้ชื่อให้ตรงกับไฟล์ของคุณ
         
       },
     );
