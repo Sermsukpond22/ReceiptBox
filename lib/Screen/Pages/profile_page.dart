@@ -34,7 +34,7 @@ class _ProfilePageState extends State<ProfilePage> {
           if (mounted) { // ตรวจสอบว่า widget ยังอยู่ใน widget tree หรือไม่
             setState(() {
               userData = doc.data() as Map<String, dynamic>;
-              fullNameController.text = userData!['FullName'] ?? '';
+              fullNameController.text = userData!['name'] ?? '';
               isLoading = false;
             });
           }
@@ -124,11 +124,11 @@ class _ProfilePageState extends State<ProfilePage> {
               if (!isEditing)
                 Column(
                   children: [
-                    Text('ชื่อ-นามสกุล: ${userData!['FullName']}', style: TextStyle(fontSize: 20)),
+                    Text('ชื่อ-นามสกุล: ${userData!['name']}', style: TextStyle(fontSize: 20)),
                     SizedBox(height: 10),
-                    Text('อีเมล: ${userData!['Email']}', style: TextStyle(fontSize: 18)),
+                    Text('อีเมล: ${userData!['email']}', style: TextStyle(fontSize: 18)),
                     SizedBox(height: 10),
-                    Text('เบอร์โทร: ${userData!['PhoneNumber']}', style: TextStyle(fontSize: 18)),
+                    Text('เบอร์โทร: ${userData!['phone']}', style: TextStyle(fontSize: 18)),
                     SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: () {
