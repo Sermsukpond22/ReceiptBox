@@ -164,4 +164,34 @@ class _ChatPageState extends State<ChatPage> {
       ),
     );
   }
+
+  @override
+void initState() {
+  super.initState();
+  // รอฟังว่า Firebase Auth พร้อมหรือยัง
+  FirebaseAuth.instance.authStateChanges().listen((user) {
+    if (user != null) {
+      print('✅ Logged in as: ${user.uid}');
+      _loadChatHistory();  // โหลดแชทเมื่อ login แล้วเท่านั้น
+    } else {
+      print('⚠️ ยังไม่ได้ login');
+    }
+  });
+}
+
+Future<void> _loadChatHistory() async {
+  String userId = FirebaseAuth.instance.currentUser?.uid ?? 'guest_user';
+
+  try {
+    List<Map<String, String>> history = await _chatLogsService.getChatHistory(userId);
+    setState(() {
+      _messages = history;
+    });
+
+    _scrollToBottom();
+  } catch (e) {
+    print('❗ ไม่สามารถโหลดประวัติแชท: $e');
+  }
+}
+
 }

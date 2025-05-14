@@ -20,4 +20,21 @@ class ChatLogsService {
       'Timestamp': FieldValue.serverTimestamp(),
     });
   }
+
+  Future<List<Map<String, String>>> getChatHistory(String userId) async {
+    final snapshot = await _firestore
+        .collection('chatbot_logs')
+        .where('UserID', isEqualTo: userId)
+        .orderBy('Timestamp', descending: false)
+        .get();
+
+    List<Map<String, String>> chatHistory = [];
+
+    for (var doc in snapshot.docs) {
+      chatHistory.add({"role": "user", "text": doc['Message']});
+      chatHistory.add({"role": "bot", "text": doc['Response']});
+    }
+
+    return chatHistory;
+  }
 }
