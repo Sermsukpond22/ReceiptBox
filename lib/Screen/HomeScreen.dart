@@ -41,61 +41,61 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
- @override
-Widget build(BuildContext context) {
-  return Scaffold(
-    appBar: AppBar(
-      title: Text(_titles[_selectedIndex]),
-      backgroundColor: Colors.blue,
-    ),
-    body: _pages[_selectedIndex],
-    floatingActionButton: FloatingActionButton(
-      onPressed: _onAddDocument,
-      backgroundColor: Colors.blueAccent,
-      tooltip: 'เพิ่มเอกสาร',
-      child: Icon(Icons.add, size: 32),
-      elevation: 8,
-    ),
-    floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-    bottomNavigationBar: BottomAppBar(
-      shape: CircularNotchedRectangle(),
-      notchMargin: 8,
-      color: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // ซ้าย
-            Row(
-              children: [
-                IconButton(
-                  icon: Icon(Icons.home, color: _selectedIndex == 0 ? Colors.blue : Colors.grey),
-                  onPressed: () => _onItemTapped(0),
-                ),
-                IconButton(
-                  icon: Icon(Icons.folder, color: _selectedIndex == 1 ? Colors.blue : Colors.grey),
-                  onPressed: () => _onItemTapped(1),
-                ),
-              ],
-            ),
-            // ขวา
-            Row(
-              children: [
-                IconButton(
-                  icon: Icon(Icons.chat_bubble, color: _selectedIndex == 3 ? Colors.blue : Colors.grey),
-                  onPressed: () => _onItemTapped(3),
-                ),
-                IconButton(
-                  icon: Icon(Icons.person, color: _selectedIndex == 4 ? Colors.blue : Colors.grey),
-                  onPressed: () => _onItemTapped(4),
-                ),
-              ],
-            ),
-          ],
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_titles[_selectedIndex]),
+        backgroundColor: Colors.blue,
+      ),
+      body: _pages[_selectedIndex],
+      floatingActionButton: FloatingActionButton(
+        onPressed: _onAddDocument,
+        backgroundColor: Colors.blueAccent,
+        tooltip: 'เพิ่มเอกสาร',
+        child: Icon(Icons.add, size: 32),
+        elevation: 8,
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      bottomNavigationBar: BottomAppBar(
+        shape: CircularNotchedRectangle(),
+        notchMargin: 8,
+        color: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // ซ้าย
+              Row(
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.home, color: _selectedIndex == 0 ? Colors.blue : Colors.grey),
+                    onPressed: () => _onItemTapped(0),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.folder, color: _selectedIndex == 1 ? Colors.blue : Colors.grey),
+                    onPressed: () => _onItemTapped(1),
+                  ),
+                ],
+              ),
+              // ขวา
+              Row(
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.chat_bubble, color: _selectedIndex == 3 ? Colors.blue : Colors.grey),
+                    onPressed: () => _onItemTapped(3),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.person, color: _selectedIndex == 4 ? Colors.blue : Colors.grey),
+                    onPressed: () => _onItemTapped(4),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }

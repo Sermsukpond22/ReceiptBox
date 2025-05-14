@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:run_android/services/chat_logs_service.dart';
 import 'package:run_android/services/gemini_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 
 class ChatPage extends StatefulWidget {
@@ -18,32 +19,37 @@ class _ChatPageState extends State<ChatPage> {
   bool _isLoading = false;
 
   void _sendMessage() async {
-    String message = _controller.text.trim();
-    if (message.isEmpty) return;
+  String message = _controller.text.trim();
+  if (message.isEmpty) return;
 
-    setState(() {
-      _messages.add({"role": "user", "text": message});
-      _isLoading = true;
-      _controller.clear();
-    });
+  setState(() {
+    _messages.add({"role": "user", "text": message});
+    _isLoading = true;
+    _controller.clear();
+  });
 
-    _scrollToBottom();
+  _scrollToBottom();
 
-    String botReply = await _geminiService.getGeminiResponse(message);
+  // ใช้ userId ที่ได้จาก Firebase Authentication
+  String userId = FirebaseAuth.instance.currentUser?.uid ?? 'guest_user'; // กำหนด userId หากไม่ได้ล็อกอิน
 
-    setState(() {
-      _messages.add({"role": "bot", "text": botReply});
-      _isLoading = false;
-    });
+  String botReply = await _geminiService.getGeminiResponse(userId, message);
 
-    _scrollToBottom();
+  setState(() {
+    _messages.add({"role": "bot", "text": botReply});
+    _isLoading = false;
+  });
 
-    await _chatLogsService.logChat(
-      userId: 'user_001', // เปลี่ยนตามระบบจริง
-      message: message,
-      response: botReply,
-    );
-  }
+  _scrollToBottom();
+
+  // บันทึกข้อมูลการแชทลง Firebase
+  await _chatLogsService.logChat(
+    userId: userId,  // ส่ง userId ที่ได้จากระบบจริง
+    message: message,
+    response: botReply,
+  );
+}
+
 
   void _scrollToBottom() {
     Future.delayed(Duration(milliseconds: 100), () {
