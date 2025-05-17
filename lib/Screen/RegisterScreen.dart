@@ -1,7 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:cool_alert/cool_alert.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'LoginScreen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -16,12 +20,127 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController = TextEditingController();
 
+  File? _profileImage;
+  final picker = ImagePicker();
+
   bool isNameValid = true;
   bool isPhoneValid = true;
   bool isEmailValid = true;
   bool isPasswordValid = true;
   bool isConfirmPasswordValid = true;
-  bool isLoading = false;  // Variable to handle loading state
+  bool isLoading = false;
+
+  Future<void> pickImage() async {
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _profileImage = File(pickedFile.path);
+      });
+    }
+  }
+
+  Future<String?> uploadProfileImage(String uid) async {
+    if (_profileImage == null) return null;
+
+    try {
+      final ref = FirebaseStorage.instance.ref().child('profile_images/$uid.jpg');
+      await ref.putFile(_profileImage!);
+      return await ref.getDownloadURL();
+    } catch (e) {
+      print('Image upload error: $e');
+      return null;
+    }
+  }
+
+  Future<void> registerUser() async {
+    setState(() {
+      isNameValid = nameController.text.trim().isNotEmpty;
+      isPhoneValid = RegExp(r'^[0-9]{9,10}$').hasMatch(phoneController.text.trim());
+      isEmailValid = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(emailController.text.trim());
+      isPasswordValid = passwordController.text.length >= 6;
+      isConfirmPasswordValid = passwordController.text == confirmPasswordController.text;
+    });
+
+    if (!isNameValid || !isPhoneValid || !isEmailValid || !isPasswordValid || !isConfirmPasswordValid) {
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final UserCredential userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+              email: emailController.text.trim(),
+              password: passwordController.text.trim());
+
+      final String uid = userCredential.user!.uid;
+
+      final String? imageUrl = await uploadProfileImage(uid);
+
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        'UserID': uid,
+        'Role': 'user',
+        'Email': emailController.text.trim(),
+        'FullName': nameController.text.trim(),
+        'PhoneNumber': phoneController.text.trim(),
+        'CreatedAt': FieldValue.serverTimestamp(),
+        'LastLogin': FieldValue.serverTimestamp(),
+        'Status': 'active',
+        'ProfileImage': imageUrl ?? '',
+      });
+
+      CoolAlert.show(
+        context: context,
+        type: CoolAlertType.success,
+        text: "สมัครสมาชิกสำเร็จ!",
+        confirmBtnColor: Colors.green,
+        onConfirmBtnTap: () {
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => LoginScreen()));
+        },
+      );
+    } on FirebaseAuthException catch (e) {
+      CoolAlert.show(
+        context: context,
+        type: CoolAlertType.error,
+        title: "เกิดข้อผิดพลาด",
+        text: e.message ?? "ไม่สามารถสมัครสมาชิกได้",
+      );
+    } catch (e) {
+      CoolAlert.show(
+        context: context,
+        type: CoolAlertType.error,
+        title: "เกิดข้อผิดพลาด",
+        text: "บางอย่างผิดพลาด: $e",
+      );
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  Widget buildTextField(String label, TextEditingController controller, bool showError,
+      {bool obscureText = false, TextInputType keyboardType = TextInputType.text}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: TextField(
+        controller: controller,
+        obscureText: obscureText,
+        keyboardType: keyboardType,
+        style: GoogleFonts.prompt(),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: TextStyle(color: Colors.grey[700]),
+          errorText: showError ? 'กรุณากรอกข้อมูลให้ถูกต้อง' : null,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          filled: true,
+          fillColor: Colors.grey.shade100,
+        ),
+      ),
+    );
+  }
 
   @override
   void dispose() {
@@ -33,192 +152,56 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  Future<void> registerUser() async {
-    setState(() {
-      isNameValid = nameController.text.trim().isNotEmpty;
-      isPhoneValid = RegExp(r'^[0-9]{9,10}$').hasMatch(phoneController.text.trim()); // Phone validation
-      isEmailValid = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(emailController.text.trim()); // Email validation
-      isPasswordValid = passwordController.text.length >= 6;
-      isConfirmPasswordValid = passwordController.text == confirmPasswordController.text;
-    });
-
-    if (isNameValid && isPhoneValid && isEmailValid && isPasswordValid && isConfirmPasswordValid) {
-      setState(() {
-        isLoading = true;  // Disable button when loading
-      });
-
-      try {
-        // Register user in Firebase
-        UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-          email: emailController.text.trim(),
-          password: passwordController.text.trim(),
-        );
-
-        await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
-          'uid': userCredential.user!.uid,
-          'name': nameController.text.trim(),
-          'phone': phoneController.text.trim(),
-          'email': emailController.text.trim(),
-          'created_at': Timestamp.now(),
-        });
-
-        if (mounted) {
-          CoolAlert.show(
-            context: context,
-            type: CoolAlertType.success,
-            title: 'สมัครสมาชิกสำเร็จ',
-            text: 'กำลังไปที่หน้าล็อกอิน...',
-            autoCloseDuration: Duration(seconds: 2),
-          );
-
-          // Navigate to login screen after a delay
-          Future.delayed(Duration(seconds: 2), () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => LoginScreen()),
-            );
-          });
-        }
-
-        // Clear form fields after successful registration
-        nameController.clear();
-        phoneController.clear();
-        emailController.clear();
-        passwordController.clear();
-        confirmPasswordController.clear();
-
-      } on FirebaseAuthException catch (e) {
-        if (e.code == 'email-already-in-use') {
-          CoolAlert.show(
-            context: context,
-            type: CoolAlertType.warning,
-            title: 'อีเมลนี้ถูกใช้แล้ว',
-            text: 'กรุณาใช้อีเมลอื่น',
-          );
-        } else {
-          CoolAlert.show(
-            context: context,
-            type: CoolAlertType.error,
-            title: 'เกิดข้อผิดพลาด',
-            text: e.message ?? 'ไม่สามารถสมัครสมาชิกได้',
-          );
-        }
-      } finally {
-        setState(() {
-          isLoading = false;  // Re-enable button after processing
-        });
-      }
-    }
-  }
-
-  Widget buildTextField({
-    required TextEditingController controller,
-    required String labelText,
-    required String hintText,
-    bool isPassword = false,
-    bool isValid = true,
-    String? errorText,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: TextField(
-        controller: controller,
-        obscureText: isPassword,
-        decoration: InputDecoration(
-          labelText: labelText,
-          hintText: hintText,
-          errorText: isValid ? null : errorText,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.blueAccent, width: 2),
-          ),
-          labelStyle: TextStyle(color: Colors.blueAccent),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.blueGrey[50],
       appBar: AppBar(
-        title: Text('สมัครสมาชิก'),
-        backgroundColor: Colors.blueAccent,
+        title: Text("สมัครสมาชิก", style: GoogleFonts.prompt(fontWeight: FontWeight.w600)),
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: Colors.black,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(24),
         child: Column(
           children: [
-            buildTextField(
-              controller: nameController,
-              labelText: 'ชื่อ-นามสกุล',
-              hintText: 'กรอกชื่อของคุณ',
-              isValid: isNameValid,
-              errorText: 'กรุณากรอกชื่อ',
-            ),
-            buildTextField(
-              controller: phoneController,
-              labelText: 'เบอร์โทรศัพท์',
-              hintText: 'กรอกเบอร์โทร',
-              isValid: isPhoneValid,
-              errorText: 'กรุณากรอกเบอร์โทรศัพท์',
-            ),
-            buildTextField(
-              controller: emailController,
-              labelText: 'อีเมล',
-              hintText: 'example@gmail.com',
-              isValid: isEmailValid,
-              errorText: 'อีเมลไม่ถูกต้อง',
-            ),
-            buildTextField(
-              controller: passwordController,
-              labelText: 'รหัสผ่าน',
-              hintText: '********',
-              isPassword: true,
-              isValid: isPasswordValid,
-              errorText: 'รหัสผ่านต้องมากกว่า 6 ตัวอักษร',
-            ),
-            buildTextField(
-              controller: confirmPasswordController,
-              labelText: 'ยืนยันรหัสผ่าน',
-              hintText: '********',
-              isPassword: true,
-              isValid: isConfirmPasswordValid,
-              errorText: 'รหัสผ่านไม่ตรงกัน',
+            GestureDetector(
+              onTap: pickImage,
+              child: CircleAvatar(
+                radius: 55,
+                backgroundColor: Colors.blueAccent.shade100,
+                backgroundImage: _profileImage != null ? FileImage(_profileImage!) : null,
+                child: _profileImage == null
+                    ? Icon(Icons.camera_alt, size: 40, color: Colors.white)
+                    : null,
+              ),
             ),
             SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: isLoading ? null : registerUser,  // Disable button when loading
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blueAccent,
-                padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: isLoading
-                  ? CircularProgressIndicator(color: Colors.white)  // Show progress indicator while loading
-                  : Text(
-                      'สมัครสมาชิก',
-                      style: TextStyle(fontSize: 18),
+            buildTextField("ชื่อ-นามสกุล", nameController, !isNameValid),
+            buildTextField("เบอร์โทร", phoneController, !isPhoneValid, keyboardType: TextInputType.phone),
+            buildTextField("อีเมล", emailController, !isEmailValid, keyboardType: TextInputType.emailAddress),
+            buildTextField("รหัสผ่าน", passwordController, !isPasswordValid, obscureText: true),
+            buildTextField("ยืนยันรหัสผ่าน", confirmPasswordController, !isConfirmPasswordValid, obscureText: true),
+            SizedBox(height: 25),
+            isLoading
+                ? CircularProgressIndicator()
+                : SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: registerUser,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
+                        padding: EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text(
+                        "สมัครสมาชิก",
+                        style: GoogleFonts.prompt(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
                     ),
-            ),
-            SizedBox(height: 20),
-            TextButton(
-              onPressed: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => LoginScreen()),
-                );
-              },
-              child: Text(
-                'มีบัญชีอยู่แล้ว? เข้าสู่ระบบ',
-                style: TextStyle(color: Colors.blueAccent),
-              ),
-            ),
+                  ),
           ],
         ),
       ),

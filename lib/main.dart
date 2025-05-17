@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:run_android/Screen/HomeScreen.dart';
 import 'package:run_android/Screen/LoginScreen.dart';
 import 'package:run_android/Screen/OnboardingScreen.dart';
@@ -23,7 +24,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
       theme: ThemeData(
-        
+        textTheme: GoogleFonts.kanitTextTheme(),
       ),
       initialRoute: '/splash', // เริ่มที่ Onboarding
       routes: {
@@ -31,6 +32,7 @@ class MyApp extends StatelessWidget {
         '/onboarding': (context) => OnboardingScreen(),
         '/login': (context) => LoginScreen(), // แก้ชื่อให้ตรงกับไฟล์ของคุณ
         '/home': (context) => HomeScreen(), 
+        
         
       },
     );
