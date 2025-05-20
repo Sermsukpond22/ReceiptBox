@@ -6,7 +6,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cool_alert/cool_alert.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'LoginScreen.dart';
+
 
 class RegisterScreen extends StatefulWidget {
   @override
@@ -40,7 +40,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<String?> uploadProfileImage(String uid) async {
-    if (_profileImage == null) return null;
+    if (_profileImage == null) return null; // Allow null image
 
     try {
       final ref = FirebaseStorage.instance.ref().child('profile_images/$uid.jpg');
@@ -76,8 +76,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               password: passwordController.text.trim());
 
       final String uid = userCredential.user!.uid;
-
-      final String? imageUrl = await uploadProfileImage(uid);
+      final String? imageUrl = await uploadProfileImage(uid); // Pass uid
 
       await FirebaseFirestore.instance.collection('users').doc(uid).set({
         'UserID': uid,
@@ -88,7 +87,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'CreatedAt': FieldValue.serverTimestamp(),
         'LastLogin': FieldValue.serverTimestamp(),
         'Status': 'active',
-        'ProfileImage': imageUrl ?? '',
+        'ProfileImage': imageUrl ?? '', // Use null-aware operator
       });
 
       CoolAlert.show(
@@ -97,7 +96,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         text: "สมัครสมาชิกสำเร็จ!",
         confirmBtnColor: Colors.green,
         onConfirmBtnTap: () {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => LoginScreen()));
+          Navigator.of(context).popUntil((route) => route.isFirst);
         },
       );
     } on FirebaseAuthException catch (e) {

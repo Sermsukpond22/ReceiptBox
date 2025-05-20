@@ -1,6 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cool_alert/cool_alert.dart';
+import 'package:run_android/Screen/Admin/AdminScreen.dart';
 import 'package:run_android/Screen/RegisterScreen.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'HomeScreen.dart';
@@ -21,6 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ... your existing build method
     return Scaffold(
       backgroundColor: Colors.blue[50],
       appBar: AppBar(
@@ -128,22 +131,51 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => isLoading = true);
 
       try {
-        await FirebaseAuth.instance.signInWithEmailAndPassword(email: email, password: password);
+        UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(email: email, password: password);
+        
+        // --- START: Admin Role Check ---
+        if (userCredential.user != null) {
+          DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).get();
 
-        CoolAlert.show(
-          context: context,
-          type: CoolAlertType.success,
-          title: 'เข้าสู่ระบบสำเร็จ',
-          text: 'กำลังนำคุณไปยังหน้าหลัก',
-          autoCloseDuration: Duration(seconds: 2),
-        );
+          if (userDoc.exists && userDoc.data() != null) {
+            Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+            String? role = userData['Role'];
 
-        await Future.delayed(Duration(seconds: 2));
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeScreen()));
+            CoolAlert.show(
+              context: context,
+              type: CoolAlertType.success,
+              title: 'เข้าสู่ระบบสำเร็จ',
+              text: 'กำลังนำคุณไปยังหน้าหลัก',
+              autoCloseDuration: Duration(seconds: 2),
+            );
+
+            await Future.delayed(Duration(seconds: 2));
+
+            if (role == 'admin') {
+              Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => AdminScreen()));
+            } else {
+              Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeScreen()));
+            }
+          } else {
+            // If user document doesn't exist in Firestore, treat as a regular user or handle as an error
+            CoolAlert.show(
+              context: context,
+              type: CoolAlertType.success,
+              title: 'เข้าสู่ระบบสำเร็จ',
+              text: 'กำลังนำคุณไปยังหน้าหลัก (ผู้ใช้ทั่วไป)',
+              autoCloseDuration: Duration(seconds: 2),
+            );
+            await Future.delayed(Duration(seconds: 2));
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeScreen()));
+          }
+        }
+        // --- END: Admin Role Check ---
+
       } on FirebaseAuthException catch (e) {
         String message = switch (e.code) {
           'user-not-found' => 'ไม่พบบัญชีผู้ใช้นี้',
           'wrong-password' => 'รหัสผ่านไม่ถูกต้อง',
+          'invalid-email' => 'รูปแบบอีเมลไม่ถูกต้อง', // Add this case for clarity
           _ => 'เกิดข้อผิดพลาด: ${e.message}',
         };
 
