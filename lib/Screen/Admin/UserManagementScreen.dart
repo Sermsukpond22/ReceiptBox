@@ -88,97 +88,68 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: StreamBuilder<QuerySnapshot>(
-        // ดึงข้อมูลผู้ใช้ที่มี role เป็น 'user' และเรียงตาม FullName
-        stream: _firestore.collection('users').where('Role', isEqualTo: 'user').snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(
-                child: Text(
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: Text('จัดการผู้ใช้', style: GoogleFonts.prompt()),
+    ),
+    body: StreamBuilder<QuerySnapshot>(
+      stream: _firestore.collection('users').where('Role', isEqualTo: 'user').snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Text(
               'เกิดข้อผิดพลาด: ${snapshot.error}',
               style: GoogleFonts.prompt(),
-            ));
-          }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(
-                child: Text(
+            ),
+          );
+        }
+
+        if (!snapshot.hasData || snapshot.data == null || snapshot.data!.docs.isEmpty) {
+          return Center(
+            child: Text(
               'ไม่พบข้อมูลผู้ใช้ทั่วไป',
               style: GoogleFonts.prompt(),
-            ));
-          }
-
-          final users = snapshot.data!.docs;
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(8.0),
-            itemCount: users.length,
-            itemBuilder: (context, index) {
-              final userDoc = users[index];
-              final userData = userDoc.data() as Map<String, dynamic>;
-
-              return Card(
-                margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-                elevation: 3,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'ชื่อ: ${userData['FullName'] ?? 'ไม่ระบุ'}',
-                        style: GoogleFonts.prompt(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'อีเมล: ${userData['Email'] ?? 'ไม่ระบุ'}',
-                        style: GoogleFonts.prompt(fontSize: 14, color: Colors.grey[700]),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'สถานะ: ${userData['Status'] ?? 'ไม่ระบุ'}',
-                        style: GoogleFonts.prompt(fontSize: 14, color: Colors.grey[700]),
-                      ),
-                      SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          ElevatedButton.icon(
-                            onPressed: () => _resetPassword(userData['Email'] ?? ''),
-                            icon: Icon(Icons.lock_reset, size: 18),
-                            label: Text('เปลี่ยนรหัสผ่าน', style: GoogleFonts.prompt(fontSize: 12)),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange[700],
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                          ),
-                          SizedBox(width: 8),
-                          ElevatedButton.icon(
-                            onPressed: () => _deleteUser(userDoc.id, userData['Email'] ?? ''),
-                            icon: Icon(Icons.delete_forever, size: 18),
-                            label: Text('ลบบัญชี', style: GoogleFonts.prompt(fontSize: 12)),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red[700],
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
+            ),
           );
-        },
-      ),
-    );
-  }
+        }
+
+        final users = snapshot.data!.docs;
+
+        return ListView.builder(
+          itemCount: users.length,
+          itemBuilder: (context, index) {
+            final user = users[index];
+            final fullName = user['FullName'] ?? 'ไม่ระบุชื่อ';
+            final email = user['Email'] ?? '';
+
+            return ListTile(
+              title: Text(fullName, style: GoogleFonts.prompt()),
+              subtitle: Text(email, style: GoogleFonts.prompt()),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.lock_reset, color: Colors.orange),
+                    tooltip: 'รีเซ็ตรหัสผ่าน',
+                    onPressed: () => _resetPassword(email),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.delete, color: Colors.red),
+                    tooltip: 'ลบผู้ใช้',
+                    onPressed: () => _deleteUser(user.id, email),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    ),
+  );
+}
 }

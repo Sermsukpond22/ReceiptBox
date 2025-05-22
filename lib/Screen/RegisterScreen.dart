@@ -1,3 +1,4 @@
+import 'dart:async'; // เพิ่ม import นี้สำหรับ Future.delayed
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -6,6 +7,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cool_alert/cool_alert.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 
 
 class RegisterScreen extends StatefulWidget {
@@ -40,10 +42,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<String?> uploadProfileImage(String uid) async {
-    if (_profileImage == null) return null; // Allow null image
+    if (_profileImage == null) return null;
 
     try {
-      final ref = FirebaseStorage.instance.ref().child('profile_images/$uid.jpg');
+      final ref =
+          FirebaseStorage.instance.ref().child('profile_images/$uid.jpg');
       await ref.putFile(_profileImage!);
       return await ref.getDownloadURL();
     } catch (e) {
@@ -55,13 +58,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> registerUser() async {
     setState(() {
       isNameValid = nameController.text.trim().isNotEmpty;
-      isPhoneValid = RegExp(r'^[0-9]{9,10}$').hasMatch(phoneController.text.trim());
-      isEmailValid = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(emailController.text.trim());
+      isPhoneValid =
+          RegExp(r'^[0-9]{9,10}$').hasMatch(phoneController.text.trim());
+      isEmailValid = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+          .hasMatch(emailController.text.trim());
       isPasswordValid = passwordController.text.length >= 6;
-      isConfirmPasswordValid = passwordController.text == confirmPasswordController.text;
+      isConfirmPasswordValid =
+          passwordController.text == confirmPasswordController.text;
     });
 
-    if (!isNameValid || !isPhoneValid || !isEmailValid || !isPasswordValid || !isConfirmPasswordValid) {
+    if (!isNameValid ||
+        !isPhoneValid ||
+        !isEmailValid ||
+        !isPasswordValid ||
+        !isConfirmPasswordValid) {
       return;
     }
 
@@ -76,7 +86,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               password: passwordController.text.trim());
 
       final String uid = userCredential.user!.uid;
-      final String? imageUrl = await uploadProfileImage(uid); // Pass uid
+      final String? imageUrl = await uploadProfileImage(uid);
 
       await FirebaseFirestore.instance.collection('users').doc(uid).set({
         'UserID': uid,
@@ -87,19 +97,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'CreatedAt': FieldValue.serverTimestamp(),
         'LastLogin': FieldValue.serverTimestamp(),
         'Status': 'active',
-        'ProfileImage': imageUrl ?? '', // Use null-aware operator
+        'ProfileImage': imageUrl ?? '',
       });
 
+
+      // ตรวจสอบว่า widget ยังคงอยู่ใน tree หลังจาก delay
+      if (!mounted) return;
+
+      // 2. แสดง Alert แจ้งเตือนสมัครสำเร็จ
       CoolAlert.show(
         context: context,
         type: CoolAlertType.success,
         text: "สมัครสมาชิกสำเร็จ!",
+        confirmBtnText: 'ตกลง',
         confirmBtnColor: Colors.green,
+        barrierDismissible: false, // ป้องกันการปิด Alert โดยการแตะข้างนอก
         onConfirmBtnTap: () {
-          Navigator.of(context).popUntil((route) => route.isFirst);
+          // Pop Alert ออกไปก่อน
+          Navigator.of(context, rootNavigator: true).pop();
+          // 3. เด้งไปที่หน้า LoginScreen
+          // หากคุณไม่ได้ใช้ named route '/loginScreen', ให้เปลี่ยนเป็น:
+          // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginScreen()));
+          Navigator.pushReplacementNamed(context, '/login');
         },
       );
+      // ---- จบส่วนที่แก้ไข ----
+
     } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
       CoolAlert.show(
         context: context,
         type: CoolAlertType.error,
@@ -107,6 +132,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         text: e.message ?? "ไม่สามารถสมัครสมาชิกได้",
       );
     } catch (e) {
+      if (!mounted) return;
       CoolAlert.show(
         context: context,
         type: CoolAlertType.error,
@@ -114,14 +140,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
         text: "บางอย่างผิดพลาด: $e",
       );
     } finally {
-      setState(() {
-        isLoading = false;
-      });
+      // ตรวจสอบว่า widget ยังคงอยู่ใน tree ก่อนเรียก setState
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
   Widget buildTextField(String label, TextEditingController controller, bool showError,
-      {bool obscureText = false, TextInputType keyboardType = TextInputType.text}) {
+      {bool obscureText = false,
+      TextInputType keyboardType = TextInputType.text}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: TextField(
@@ -156,7 +186,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Scaffold(
       backgroundColor: Colors.blueGrey[50],
       appBar: AppBar(
-        title: Text("สมัครสมาชิก", style: GoogleFonts.prompt(fontWeight: FontWeight.w600)),
+        title: Text("สมัครสมาชิก",
+            style: GoogleFonts.prompt(fontWeight: FontWeight.w600)),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -171,7 +202,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: CircleAvatar(
                 radius: 55,
                 backgroundColor: Colors.blueAccent.shade100,
-                backgroundImage: _profileImage != null ? FileImage(_profileImage!) : null,
+                backgroundImage:
+                    _profileImage != null ? FileImage(_profileImage!) : null,
                 child: _profileImage == null
                     ? Icon(Icons.camera_alt, size: 40, color: Colors.white)
                     : null,
@@ -179,10 +211,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
             SizedBox(height: 20),
             buildTextField("ชื่อ-นามสกุล", nameController, !isNameValid),
-            buildTextField("เบอร์โทร", phoneController, !isPhoneValid, keyboardType: TextInputType.phone),
-            buildTextField("อีเมล", emailController, !isEmailValid, keyboardType: TextInputType.emailAddress),
-            buildTextField("รหัสผ่าน", passwordController, !isPasswordValid, obscureText: true),
-            buildTextField("ยืนยันรหัสผ่าน", confirmPasswordController, !isConfirmPasswordValid, obscureText: true),
+            buildTextField("เบอร์โทร", phoneController, !isPhoneValid,
+                keyboardType: TextInputType.phone),
+            buildTextField("อีเมล", emailController, !isEmailValid,
+                keyboardType: TextInputType.emailAddress),
+            buildTextField("รหัสผ่าน", passwordController, !isPasswordValid,
+                obscureText: true),
+            buildTextField("ยืนยันรหัสผ่าน", confirmPasswordController,
+                !isConfirmPasswordValid,
+                obscureText: true),
             SizedBox(height: 25),
             isLoading
                 ? CircularProgressIndicator()
@@ -193,11 +230,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blueAccent,
                         padding: EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
                       ),
                       child: Text(
                         "สมัครสมาชิก",
-                        style: GoogleFonts.prompt(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: GoogleFonts.prompt(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white),
                       ),
                     ),
                   ),

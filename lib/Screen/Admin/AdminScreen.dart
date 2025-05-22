@@ -1,13 +1,10 @@
 // lib/Screen/AdminScreen.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // สำหรับ logout
-// import 'package:cloud_firestore/cloud_firestore.dart'; // สำหรับใช้ในอนาคตถ้าต้องการ
-import 'package:cool_alert/cool_alert.dart'; // สำหรับแจ้งเตือน
-import 'package:run_android/Screen/LoginScreen.dart';
 
-import 'UserManagementScreen.dart'; // import หน้าจัดการผู้ใช้
-import 'AdminSettingsScreen.dart'; // import หน้าตั้งค่าผู้ดูแลระบบ
+import 'package:run_android/Screen/Admin/AdminSettingsScreen.dart';
+import 'package:run_android/Screen/Admin/UserManagementScreen.dart';
+
 
 
 class AdminScreen extends StatefulWidget {
@@ -18,10 +15,16 @@ class AdminScreen extends StatefulWidget {
 class _AdminScreenState extends State<AdminScreen> {
   int _selectedIndex = 0;
 
+  // กำหนดสี Google Blue และสีแดงสำหรับ Admin (ถ้าคุณกำหนดไว้ใน main.dart แล้ว ไม่ต้องประกาศซ้ำ)
+  // หากต้องการให้ Admin มีสีแดงเฉพาะตัว ควรประกาศใน class นี้ หรือส่งผ่าน Theme
+  static const Color googleBlue = Color(0xFF4285F4);
+  static const Color adminRed = Color(0xFFD32F2F); // สีแดงเข้มขึ้น
+  static const Color googleLightBlueBackground = Color(0xFFE8F0FE);
+
   // รายการ Widget ที่จะแสดงในแต่ละ tab ของ BottomNavigationBar
   static final List<Widget> _widgetOptions = <Widget>[
-    UserManagementScreen(), // หน้าจัดการผู้ใช้
-    AdminSettingsScreen(), // หน้าตั้งค่าผู้ดูแลระบบ
+    UserManagementScreen(), // หน้าจัดการผู้ใช้ (ต้องดึงข้อมูลผู้ใช้ในคลาสนี้)
+    AdminSettingsScreen(), // หน้าตั้งค่าผู้ดูแลระบบ (ต้องดึง/จัดการข้อมูลในคลาสนี้)
   ];
 
   void _onItemTapped(int index) {
@@ -30,57 +33,21 @@ class _AdminScreenState extends State<AdminScreen> {
     });
   }
 
-  // ฟังก์ชันสำหรับออกจากระบบ
-  Future<void> _logout() async {
-    CoolAlert.show(
-      context: context,
-      type: CoolAlertType.confirm,
-      title: 'ออกจากระบบ',
-      text: 'คุณแน่ใจหรือไม่ที่ต้องการออกจากระบบ?',
-      confirmBtnText: 'ใช่',
-      cancelBtnText: 'ไม่',
-      onConfirmBtnTap: () async {
-        try {
-          await FirebaseAuth.instance.signOut();
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => LoginScreen()),
-            (Route<dynamic> route) => false, // ลบทุกหน้าออกจาก stack
-          );
-          CoolAlert.show(
-            context: context,
-            type: CoolAlertType.success,
-            title: 'ออกจากระบบสำเร็จ',
-            text: 'กำลังนำคุณไปยังหน้าเข้าสู่ระบบ',
-            autoCloseDuration: Duration(seconds: 2),
-          );
-        } catch (e) {
-          CoolAlert.show(
-            context: context,
-            type: CoolAlertType.error,
-            title: 'เกิดข้อผิดพลาด',
-            text: 'ไม่สามารถออกจากระบบได้: ${e.toString()}',
-          );
-        }
-      },
-    );
-  }
+  
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // พื้นหลังของ Scaffold จะเป็นสี googleLightBlueBackground ที่กำหนดใน main.dart
       appBar: AppBar(
         title: Text(
           'หน้าสำหรับผู้ดูแลระบบ',
-          style: GoogleFonts.prompt(fontWeight: FontWeight.w600, color: Colors.white),
+          style: GoogleFonts.prompt(fontWeight: FontWeight.w600, color: Colors.white), // ใช้ Prompt
         ),
-        backgroundColor: Colors.red[700],
+        backgroundColor: adminRed, // AppBar ของ Admin จะเป็นสีแดงเฉพาะตัว
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: Icon(Icons.logout, color: Colors.white),
-            onPressed: _logout,
-            tooltip: 'ออกจากระบบ',
-          ),
+          
         ],
       ),
       body: _widgetOptions.elementAt(_selectedIndex), // แสดง Widget ตามเมนูที่เลือก
@@ -96,12 +63,12 @@ class _AdminScreenState extends State<AdminScreen> {
           ),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: Colors.red[700], // สีไอคอนที่เลือก
+        selectedItemColor: adminRed, // สีไอคอนที่เลือกเป็นสีแดง
         unselectedItemColor: Colors.grey, // สีไอคอนที่ยังไม่เลือก
         onTap: _onItemTapped,
-        backgroundColor: Colors.white,
-        selectedLabelStyle: GoogleFonts.prompt(),
-        unselectedLabelStyle: GoogleFonts.prompt(),
+        backgroundColor: Theme.of(context).colorScheme.surface, // ใช้สี surface ของ Theme (มักจะเป็นสีขาว)
+        selectedLabelStyle: GoogleFonts.prompt(), // ฟอนต์สำหรับ label ที่เลือก
+        unselectedLabelStyle: GoogleFonts.prompt(), // ฟอนต์สำหรับ label ที่ยังไม่เลือก
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
+// ตรวจสอบว่า path ไปยังหน้า EditProfilePage และ ChangePasswordPage ถูกต้อง
 import 'package:run_android/Screen/Pages/EditProfile/ChangePasswordPage.dart';
 import 'package:run_android/Screen/Pages/EditProfile/EditProfilePage.dart';
 
@@ -11,87 +12,242 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  Map<String, dynamic>? userData;
-  bool isLoading = true;
-  bool notificationsEnabled = true;
+  Map<String, dynamic>? _userData;
+  bool _isLoading = true;
+  bool _notificationsEnabled = true; // ค่าเริ่มต้นของการแจ้งเตือน (สามารถดึงมาจาก Firestore ได้)
 
   @override
   void initState() {
     super.initState();
-    fetchUserData();
+    _fetchUserData();
   }
 
-  Future<void> fetchUserData() async {
+  Future<void> _fetchUserData() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+    });
+
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-      if (doc.exists) {
+      try {
+        final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        if (mounted) {
+          if (doc.exists) {
+            setState(() {
+              _userData = doc.data();
+              // ตัวอย่าง: หากคุณเก็บสถานะการแจ้งเตือนใน Firestore
+              // _notificationsEnabled = _userData?['notificationsEnabled'] ?? true;
+              _isLoading = false;
+            });
+          } else {
+            setState(() {
+              _userData = null;
+              _isLoading = false;
+            });
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'ไม่สามารถโหลดข้อมูลผู้ใช้ได้: $e',
+                style: GoogleFonts.prompt(), // ใช้ Prompt
+              ),
+            ),
+          );
+        }
+        print("Error fetching user data: $e");
+      }
+    } else {
+      if (mounted) {
         setState(() {
-          userData = doc.data();
-          isLoading = false;
+          _isLoading = false;
+          // ควรจัดการกรณีที่ไม่มีผู้ใช้ login อยู่
         });
       }
     }
   }
 
-  void logout() async {
+  Future<void> _logout() async {
     await FirebaseAuth.instance.signOut();
-    Navigator.of(context).pushReplacementNamed('/login');
+    if (mounted) {
+      // ใช้ pushReplacementNamed เพื่อไม่ให้ผู้ใช้กดปุ่มย้อนกลับมาหน้านี้ได้
+      Navigator.of(context).pushReplacementNamed('/login');
+      // หรือหากต้องการล้าง stack ทั้งหมด:
+      // Navigator.of(context).pushNamedAndRemoveUntil('/login', (Route<dynamic> route) => false);
+    }
+  }
+
+  Widget _buildProfileActionItem({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    Color? iconColor,
+  }) {
+    return Card(
+      elevation: 2.0,
+      margin: const EdgeInsets.symmetric(vertical: 7.0),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+      child: ListTile(
+        leading: Icon(icon, color: iconColor ?? Theme.of(context).primaryColor, size: 24), // ใช้ primaryColor จากธีม
+        title: Text(title, style: GoogleFonts.prompt(fontSize: 16)), // ใช้ Prompt
+        trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[600]),
+        onTap: onTap,
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      ),
+    );
+  }
+
+  Widget _buildNotificationToggle() {
+    return Card(
+      elevation: 2.0,
+      margin: const EdgeInsets.symmetric(vertical: 7.0),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+      child: SwitchListTile(
+        title: Text(
+          'การแจ้งเตือน',
+          style: GoogleFonts.prompt(fontSize: 16), // ใช้ Prompt
+        ),
+        value: _notificationsEnabled,
+        onChanged: (bool value) {
+          setState(() {
+            _notificationsEnabled = value;
+            // TODO: บันทึกค่า _notificationsEnabled นี้ (เช่น ลง Firestore หรือ SharedPreferences)
+            // ตัวอย่าง:
+            // if (FirebaseAuth.instance.currentUser != null) {
+            //   FirebaseFirestore.instance
+            //       .collection('users')
+            //       .doc(FirebaseAuth.instance.currentUser!.uid)
+            //       .update({'notificationsEnabled': value});
+            // }
+          });
+        },
+        secondary: Icon(
+          _notificationsEnabled ? Icons.notifications_active_outlined : Icons.notifications_off_outlined,
+          color: Theme.of(context).primaryColor, // ใช้ primaryColor จากธีม
+          size: 24,
+        ),
+        activeColor: Theme.of(context).primaryColor, // สีของ Switch เมื่อเปิด
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) return Scaffold(body: Center(child: CircularProgressIndicator()));
-    if (userData == null) return Scaffold(body: Center(child: Text('ไม่พบข้อมูลผู้ใช้')));
+    // Scaffold background color และ AppBar theme จะถูกใช้จาก main.dart โดยอัตโนมัติ
+
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('โปรไฟล์', style: GoogleFonts.prompt(fontWeight: FontWeight.bold)), // ใช้ Prompt
+          centerTitle: true,
+        ),
+        body: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor), 
+          ),
+        ),
+      );
+    }
+
+    if (_userData == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('โปรไฟล์', style: GoogleFonts.prompt(fontWeight: FontWeight.bold)), // ใช้ Prompt
+          centerTitle: true,
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, color: Colors.red, size: 50),
+                SizedBox(height: 16),
+                Text('ไม่พบข้อมูลผู้ใช้', style: GoogleFonts.prompt(fontSize: 18, color: Colors.red)), // ใช้ Prompt
+                SizedBox(height: 20),
+                ElevatedButton.icon(
+                  icon: Icon(Icons.refresh),
+                  label: Text(
+                    'ลองอีกครั้ง',
+                    // Text style จะถูกกำหนดโดย ElevatedButtonTheme ใน main.dart
+                  ),
+                  onPressed: _fetchUserData,
+                  style: ElevatedButton.styleFrom(
+                    // ไม่ต้องกำหนด backgroundColor, foregroundColor, shape, minimumSize, textStyle ที่นี่
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12), // สามารถปรับ padding ได้
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    String? profileImageUrl = _userData!['ProfileImage'] as String?;
+    bool hasProfileImage = profileImageUrl != null && profileImageUrl.isNotEmpty;
+    String fullName = _userData!['FullName'] ?? 'ไม่พบชื่อ';
+    String email = _userData!['Email'] ?? 'ไม่พบอีเมล';
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'โปรไฟล์',
-          style: GoogleFonts.kanit(fontWeight: FontWeight.bold),
-        ),
+        title: Text('โปรไฟล์', style: GoogleFonts.prompt(fontWeight: FontWeight.bold)), // ใช้ Prompt
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            SizedBox(height: 20),
             CircleAvatar(
               radius: 60,
-              backgroundImage: userData!['ProfileImage'] != null
-                  ? NetworkImage(userData!['ProfileImage'])
-                  : null,
-              child: userData!['ProfileImage'] == null
-                  ? Icon(Icons.person, size: 60, color: Colors.grey)
+              backgroundColor: Colors.grey.shade300,
+              backgroundImage: hasProfileImage ? NetworkImage(profileImageUrl!) : null,
+              child: !hasProfileImage
+                  ? Icon(Icons.person, size: 60, color: Colors.grey.shade700)
                   : null,
             ),
             SizedBox(height: 16),
             Text(
-              userData!['FullName'] ?? '',
-              style: GoogleFonts.kanit(fontSize: 22, fontWeight: FontWeight.w600),
+              fullName,
+              style: GoogleFonts.prompt(fontSize: 22, fontWeight: FontWeight.w600), // ใช้ Prompt
+              textAlign: TextAlign.center,
             ),
             SizedBox(height: 8),
             Text(
-              userData!['Email'] ?? '',
-              style: GoogleFonts.kanit(fontSize: 16, color: Colors.grey[700]),
+              email,
+              style: GoogleFonts.prompt(fontSize: 16, color: Colors.grey[700]), // ใช้ Prompt
+              textAlign: TextAlign.center,
             ),
             SizedBox(height: 32),
 
-            _buildButton(
-              icon: Icons.edit,
-              label: 'แก้ไขโปรไฟล์',
+            _buildProfileActionItem(
+              icon: Icons.edit_outlined,
+              title: 'แก้ไขโปรไฟล์',
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => EditProfilePage(userData: userData!)),
-                ).then((_) => fetchUserData());
+                  MaterialPageRoute(builder: (_) => EditProfilePage(userData: _userData!)),
+                ).then((result) {
+                  // รีเฟรชข้อมูลหลังจากแก้ไข หากมีการเปลี่ยนแปลง
+                  if (result == true && mounted) {
+                    _fetchUserData();
+                  }
+                });
               },
             ),
 
-            _buildButton(
-              icon: Icons.lock,
-              label: 'เปลี่ยนรหัสผ่าน',
+            _buildProfileActionItem(
+              icon: Icons.lock_outline,
+              title: 'เปลี่ยนรหัสผ่าน',
               onTap: () {
                 Navigator.push(
                   context,
@@ -100,54 +256,30 @@ class _ProfilePageState extends State<ProfilePage> {
               },
             ),
 
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(
-                'ปิดการแจ้งเตือน',
-                style: GoogleFonts.kanit(fontSize: 16),
-              ),
-              value: !notificationsEnabled,
-              onChanged: (value) {
-                setState(() => notificationsEnabled = !value);
-              },
-              secondary: Icon(Icons.notifications_off),
-            ),
+            _buildNotificationToggle(),
 
-            SizedBox(height: 16),
+            SizedBox(height: 24),
 
-            ElevatedButton.icon(
-              icon: Icon(Icons.logout),
-              label: Text(
-                'ออกจากระบบ',
-                style: GoogleFonts.kanit(fontWeight: FontWeight.bold),
-              ),
-              onPressed: logout,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: Icon(Icons.logout), // สีไอคอนจะถูกกำหนดโดย foregroundColor ของปุ่ม
+                label: Text(
+                  'ออกจากระบบ',
+                  style: GoogleFonts.prompt(fontWeight: FontWeight.bold, fontSize: 16), // ใช้ Prompt
+                ),
+                onPressed: _logout,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent, // ปุ่ม Logout มีสีแดงเป็นพิเศษ
+                  foregroundColor: Colors.white, // ข้อความเป็นสีขาว
+                  padding: EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+                  elevation: 2.0,
+                ),
               ),
             ),
+            SizedBox(height: 20),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildButton({required IconData icon, required String label, required VoidCallback onTap}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: ElevatedButton.icon(
-        icon: Icon(icon),
-        label: Text(
-          label,
-          style: GoogleFonts.kanit(fontSize: 16),
-        ),
-        onPressed: onTap,
-        style: ElevatedButton.styleFrom(
-          minimumSize: Size(double.infinity, 50),
-          padding: EdgeInsets.symmetric(horizontal: 20),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
     );

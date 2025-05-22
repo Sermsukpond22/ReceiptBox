@@ -6,7 +6,6 @@ import 'package:run_android/Screen/OnboardingScreen.dart';
 import 'package:run_android/Screen/SplashScreen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-// เพิ่ม import
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,19 +23,86 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Receipt Box',
       theme: ThemeData(
-        textTheme: GoogleFonts.kanitTextTheme(),
+        // ***************************************************************
+        // ส่วนสำคัญ: กำหนด ColorScheme เพื่อควบคุมสีทั่วทั้งแอป
+        // ***************************************************************
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue, // ใช้สีน้ำเงินเป็น "เมล็ด" หลัก
+          primary: Colors.blue, // สีหลักของแอป
+          onPrimary: Colors.white, // สีข้อความ/ไอคอนบนสี primary
+          secondary: Colors.blueAccent, // สีรอง (ใช้กับ FloatingActionButton)
+          onSecondary: Colors.white, // สีข้อความ/ไอคอนบนสี secondary
+          // กำหนดสีพื้นหลังหลักของ Scaffold ให้เป็นสีฟ้าอ่อน
+          background: Colors.blue[50]!, // พื้นหลังของ body ใน Scaffold
+          onBackground: Colors.black87, // สีข้อความบนพื้นหลัง
+          surface: Colors.white, // สีของ Card, Dialog, BottomAppBar
+          onSurface: Colors.black87, // สีข้อความบนพื้นผิว
+          error: Colors.red,
+          onError: Colors.white,
+        ),
+
+        // กำหนดสีพื้นหลัง Scaffold ทั่วไปให้เป็นสีฟ้าอ่อน
+        // ค่านี้จะถูกใช้เป็นค่าเริ่มต้นสำหรับพื้นหลังของ Scaffold
+        scaffoldBackgroundColor: Colors.grey[50], // กำหนดตรงนี้!
+
+        // ตั้งค่า AppBar ทั่วไป
+        appBarTheme: AppBarTheme(
+          backgroundColor: Colors.blue, // ตั้งค่า AppBar ให้เป็นสีน้ำเงิน
+          foregroundColor: Colors.black, // สีของ title และไอคอนใน AppBar
+          elevation: 4.0, // เพิ่มเงาเล็กน้อย
+          titleTextStyle: GoogleFonts.prompt(fontWeight: FontWeight.w600, fontSize: 20, color: Colors.black),
+          centerTitle: true, // จัด title ให้อยู่ตรงกลาง
+        ),
+
+        // ตั้งค่า ElevatedButton ทั่วไป
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue, // สีปุ่มหลัก
+            foregroundColor: Colors.white, // สีข้อความบนปุ่มหลัก
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            minimumSize: Size(double.infinity, 50),
+            textStyle: GoogleFonts.prompt(fontSize: 16, fontWeight: FontWeight.bold),
+            elevation: 2.0, // เพิ่มเงาเล็กน้อย
+          ),
+        ),
+
+        // ตั้งค่า InputDecoration (สำหรับ TextField) ทั่วไป
+        inputDecorationTheme: InputDecorationTheme(
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          filled: true,
+          fillColor: Colors.white, // พื้นหลังของ TextField เป็นสีขาว
+          labelStyle: GoogleFonts.prompt(color: Colors.grey[700]),
+          prefixIconColor: Colors.grey[700], // สีของไอคอนนำหน้า
+          floatingLabelStyle: GoogleFonts.prompt(color: Colors.blue[700], fontWeight: FontWeight.w600),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.blue.shade700, width: 2),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade400), // สีขอบเมื่อปกติ
+          ),
+          disabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade300), // สีขอบเมื่อ disabled
+          ),
+        ),
+
+        // กำหนด font ทั่วทั้งแอป (ยกเว้นที่กำหนดเองในแต่ละ Widget)
+        // คุณสามารถเลือกใช้ Kanit หรือ Prompt เป็น TextTheme หลักได้
+        textTheme: GoogleFonts.promptTextTheme(
+          Theme.of(context).textTheme, // ผสมผสานกับ TextTheme Default ของ Flutter
+        ),
       ),
-      initialRoute: '/splash', // เริ่มที่ Onboarding
+      initialRoute: '/login', // ควรเริ่มที่ SplashScreen ก่อน
       routes: {
         '/splash': (context) => SplashScreen(),
         '/onboarding': (context) => OnboardingScreen(),
-        '/login': (context) => LoginScreen(), // แก้ชื่อให้ตรงกับไฟล์ของคุณ
-        '/home': (context) => HomeScreen(), 
-        
-        
+        '/login': (context) => LoginScreen(),
+        '/home': (context) => HomeScreen(),
       },
     );
   }
 }
-
-
