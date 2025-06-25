@@ -13,13 +13,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
-  final List<String> _titles = [
-    'หน้าหลัก',
-    'จัดเก็บเอกสาร',
-    'เพิ่มเอกสาร',
-    'แชท',
-    'โปรไฟล์'
-  ];
+
 
   final List<Widget> _pages = [
     HomePage(),
@@ -44,10 +38,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_titles[_selectedIndex]),
-        backgroundColor: Colors.blue,
-      ),
       body: _pages[_selectedIndex],
       floatingActionButton: FloatingActionButton(
         onPressed: _onAddDocument,

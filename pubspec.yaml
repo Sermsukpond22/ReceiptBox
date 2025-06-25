@@ -44,6 +44,10 @@ dependencies:
   cool_alert: ^2.0.0
   path: ^1.8.0
   google_fonts: ^6.1.0
+  path_provider: ^2.0.15
+  googleapis: ^13.1.0
+  googleapis_auth: ^1.6.0
+  
 
 dev_dependencies:
   flutter_test:
@@ -69,6 +73,7 @@ flutter:
    assets:
     - .env
     - assets/logo_receipt.png
+    - assets/receiptbox_ocr.json
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
