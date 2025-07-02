@@ -1,9 +1,13 @@
-// add_receipt_page.dart (Fixed version - ไม่มีหน้าจอดำ)
+// add_receipt_page.dart (Complete Version with OCR Scanner)
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:run_android/Screen/Pages/ReceiptPage.dart/Widgets/receipt_scanner_widget.dart';
+import 'package:run_android/services/models/receipt_ocr_result.dart';
 import 'package:run_android/services/receipt_service.dart';
+import 'package:run_android/services/receipt_service.dart' show ReceiptData;
+
 
 class AddReceiptPage extends StatefulWidget {
   const AddReceiptPage({super.key});
@@ -15,6 +19,7 @@ class AddReceiptPage extends StatefulWidget {
 class _AddReceiptPageState extends State<AddReceiptPage> {
   // State variables
   bool _isProcessing = false;
+  bool _isScanning = false;
   File? _imageFile;
 
   // Controllers
@@ -57,6 +62,110 @@ class _AddReceiptPageState extends State<AddReceiptPage> {
     _dateController.dispose();
     _amountController.dispose();
     _descriptionController.dispose();
+  }
+
+  // === OCR HANDLING METHODS ===
+  
+  void _onScanStart() {
+    setState(() {
+      _isScanning = true;
+    });
+    _showInfoSnackBar("กำลังสแกนใบเสร็จ...");
+  }
+
+  void _onScanComplete(ReceiptOCRResult result) {
+    setState(() {
+      _isScanning = false;
+    });
+
+    if (result.isNotEmpty) {
+      _fillFormFromOCR(result);
+      _showScanResultDialog(result);
+    } else {
+      _showWarningDialog("ไม่พบข้อมูลใบเสร็จ กรุณากรอกข้อมูลด้วยตนเอง");
+    }
+  }
+
+  void _onScanError(String error) {
+    setState(() {
+      _isScanning = false;
+    });
+    _showErrorDialog("เกิดข้อผิดพลาดในการสแกน: $error");
+  }
+
+  void _fillFormFromOCR(ReceiptOCRResult result) {
+    // กรอกข้อมูลลงในฟอร์ม
+    if (result.storeName.isNotEmpty) {
+      _storeController.text = result.storeName;
+    }
+    
+    if (result.amount != null) {
+      _amountController.text = result.amount!.toStringAsFixed(2);
+    }
+    
+    if (result.date != null) {
+      _dateController.text = DateFormat('dd/MM/yyyy').format(result.date!);
+    }
+    
+    if (result.description.isNotEmpty) {
+      _descriptionController.text = result.description;
+    }
+  }
+
+  void _showScanResultDialog(ReceiptOCRResult result) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green, size: 28),
+              SizedBox(width: 8),
+              Text('สแกนสำเร็จ!'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('ข้อมูลที่สแกนได้ (ความแม่นยำ: ${(result.confidence * 100).toStringAsFixed(0)}%):'),
+              const SizedBox(height: 12),
+              if (result.storeName.isNotEmpty) ...[
+                Text('• ร้านค้า: ${result.storeName}'),
+                const SizedBox(height: 4),
+              ],
+              if (result.amount != null) ...[
+                Text('• จำนวนเงิน: ${result.amount!.toStringAsFixed(2)} บาท'),
+                const SizedBox(height: 4),
+              ],
+              if (result.date != null) ...[
+                Text('• วันที่: ${DateFormat('dd/MM/yyyy').format(result.date!)}'),
+                const SizedBox(height: 4),
+              ],
+              if (result.description.isNotEmpty) ...[
+                Text('• รายการ: ${result.description}'),
+                const SizedBox(height: 4),
+              ],
+              const SizedBox(height: 12),
+              Text(
+                'ข้อมูลได้ถูกกรอกลงในฟอร์มแล้ว คุณสามารถแก้ไขได้ตามต้องการ',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('เข้าใจแล้ว'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   // === IMAGE HANDLING METHODS ===
@@ -369,7 +478,7 @@ class _AddReceiptPageState extends State<AddReceiptPage> {
     _showInfoSnackBar("ข้อมูลทั้งหมดถูกล้างเรียบร้อยแล้ว");
   }
 
-  // === NOTIFICATION METHODS (ใช้ SnackBar และ Dialog แทน CoolAlert) ===
+  // === NOTIFICATION METHODS ===
   
   void _showSuccessSnackBar(String message) {
     if (mounted) {
@@ -478,13 +587,17 @@ class _AddReceiptPageState extends State<AddReceiptPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('• กรอกข้อมูลใบเสร็จให้ครบถ้วน'),
+                Text('📱 สแกนใบเสร็จอัตโนมัติ:'),
+                Text('• ใช้ AI ช่วยดึงข้อมูลจากใบเสร็จ'),
+                Text('• ถ่ายรูปใบเสร็จให้ชัดเจน'),
                 SizedBox(height: 8),
+                Text('✏️ กรอกข้อมูลด้วยตนเอง:'),
                 Text('• วันที่และจำนวนเงินเป็นข้อมูลที่จำเป็น'),
-                SizedBox(height: 8),
-                Text('• สามารถเพิ่มรูปภาพใบเสร็จได้'),
-                SizedBox(height: 8),
                 Text('• ตรวจสอบข้อมูลก่อนบันทึก'),
+                SizedBox(height: 8),
+                Text('📸 รูปภาพใบเสร็จ:'),
+                Text('• สามารถเพิ่มรูปภาพใบเสร็จได้'),
+                Text('• ไม่บังคับ แต่ช่วยให้จำได้ง่าย'),
               ],
             ),
           ),
@@ -512,6 +625,9 @@ class _AddReceiptPageState extends State<AddReceiptPage> {
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       title: const Text('เพิ่มใบเสร็จ'),
+      backgroundColor: Theme.of(context).primaryColor,
+      foregroundColor: Colors.white,
+      elevation: 2,
       actions: [
         IconButton(
           icon: const Icon(Icons.help_outline),
@@ -525,7 +641,7 @@ class _AddReceiptPageState extends State<AddReceiptPage> {
         ),
         IconButton(
           icon: const Icon(Icons.clear_all),
-          onPressed: _isProcessing ? null : _showClearConfirmation,
+          onPressed: (_isProcessing || _isScanning) ? null : _showClearConfirmation,
           tooltip: 'ล้างข้อมูล',
         ),
       ],
@@ -547,6 +663,33 @@ class _AddReceiptPageState extends State<AddReceiptPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // OCR Scanner Section
+          ReceiptScannerWidget(
+            onScanComplete: _onScanComplete,
+            onScanStart: _onScanStart,
+            onError: _onScanError,
+          ),
+          const SizedBox(height: 24),
+          
+          // Divider
+          Row(
+            children: [
+              const Expanded(child: Divider()),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'หรือกรอกข้อมูลด้วยตนเอง',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              const Expanded(child: Divider()),
+            ],
+          ),
+          const SizedBox(height: 24),
+          
           _buildImageSection(),
           _buildHeaderCard(),
           const SizedBox(height: 24),
@@ -632,9 +775,10 @@ class _AddReceiptPageState extends State<AddReceiptPage> {
             ),
             const SizedBox(height: 4),
             Text(
-              'กรุณากรอกข้อมูลใบเสร็จอย่างครบถ้วน',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              'กรุณากรอกข้อมูลใบเสร็จให้ครบถ้วน',
+              style: TextStyle(
                 color: Colors.grey[600],
+                fontSize: 14,
               ),
             ),
           ],
@@ -646,135 +790,139 @@ class _AddReceiptPageState extends State<AddReceiptPage> {
   Widget _buildFormFields() {
     return Column(
       children: [
-        _buildStoreNameField(),
+        _buildTextField(
+          controller: _storeController,
+          label: 'ชื่อร้านค้า',
+          icon: Icons.store,
+          hint: 'เช่น 7-Eleven, ร้านอาหาร ABC',
+        ),
         const SizedBox(height: 16),
+        
         _buildDateField(),
         const SizedBox(height: 16),
-        _buildAmountField(),
+        
+        _buildTextField(
+          controller: _amountController,
+          label: 'จำนวนเงิน (บาท)',
+          icon: Icons.attach_money,
+          hint: 'เช่น 150.00',
+          keyboardType: TextInputType.numberWithOptions(decimal: true),
+          isRequired: true,
+        ),
         const SizedBox(height: 16),
-        _buildDescriptionField(),
+        
+        _buildTextField(
+          controller: _descriptionController,
+          label: 'รายละเอียด',
+          icon: Icons.description,
+          hint: 'เช่น อาหาร, เครื่องดื่ม, อุปกรณ์เครื่องเขียน',
+          maxLines: 3,
+        ),
       ],
     );
   }
 
-  Widget _buildStoreNameField() {
-    return TextField(
-      controller: _storeController,
-      enabled: !_isProcessing,
-      decoration: const InputDecoration(
-        labelText: 'ชื่อร้านค้า/บริการ',
-        prefixIcon: Icon(Icons.store),
-        border: OutlineInputBorder(),
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    String? hint,
+    TextInputType? keyboardType,
+    int maxLines = 1,
+    bool isRequired = false,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      decoration: InputDecoration(
+        labelText: isRequired ? '$label *' : label,
+        hintText: hint,
+        prefixIcon: Icon(icon),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        filled: true,
+        fillColor: Colors.grey[50],
       ),
     );
   }
 
   Widget _buildDateField() {
-    return TextField(
+    return TextFormField(
       controller: _dateController,
-      enabled: !_isProcessing,
-      decoration: InputDecoration(
-        labelText: 'วันที่ (วว/ดด/ปปปป)',
-        prefixIcon: const Icon(Icons.calendar_today),
-        suffixIcon: IconButton(
-          icon: const Icon(Icons.date_range),
-          onPressed: _isProcessing ? null : _selectDate,
-        ),
-        border: const OutlineInputBorder(),
-      ),
-      keyboardType: TextInputType.datetime,
-      onTap: _isProcessing ? null : _selectDate,
       readOnly: true,
-    );
-  }
-
-  Widget _buildAmountField() {
-    return TextField(
-      controller: _amountController,
-      enabled: !_isProcessing,
-      decoration: const InputDecoration(
-        labelText: 'จำนวนเงิน (บาท)',
-        prefixIcon: Icon(Icons.monetization_on),
-        border: OutlineInputBorder(),
-        helperText: 'ตัวอย่าง: 100.50',
+      onTap: _selectDate,
+      decoration: InputDecoration(
+        labelText: 'วันที่ *',
+        hintText: 'เลือกวันที่',
+        prefixIcon: const Icon(Icons.calendar_today),
+        suffixIcon: const Icon(Icons.arrow_drop_down),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        filled: true,
+        fillColor: Colors.grey[50],
       ),
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-    );
-  }
-
-  Widget _buildDescriptionField() {
-    return TextField(
-      controller: _descriptionController,
-      enabled: !_isProcessing,
-      decoration: const InputDecoration(
-        labelText: 'คำอธิบาย/รายการ',
-        prefixIcon: Icon(Icons.description),
-        border: OutlineInputBorder(),
-        helperText: 'รายละเอียดเพิ่มเติม (ไม่บังคับ)',
-      ),
-      maxLines: 3,
     );
   }
 
   Widget _buildActionButtons() {
     return Column(
       children: [
-        _buildSaveButton(),
-        const SizedBox(height: 16),
-        _buildClearButton(),
+        // Save Button
+        SizedBox(
+          width: double.infinity,
+          height: 50,
+          child: ElevatedButton.icon(
+            onPressed: (_isProcessing || _isScanning) ? null : _showSaveConfirmation,
+            icon: _isProcessing 
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Icon(Icons.save),
+            label: Text(_isProcessing ? 'กำลังบันทึก...' : 'บันทึกใบเสร็จ'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        
+        // Clear Button
+        SizedBox(
+          width: double.infinity,
+          height: 50,
+          child: OutlinedButton.icon(
+            onPressed: (_isProcessing || _isScanning) ? null : _showClearConfirmation,
+            icon: const Icon(Icons.clear_all),
+            label: const Text('ล้างข้อมูล'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.red,
+              side: const BorderSide(color: Colors.red),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ),
       ],
-    );
-  }
-
-  Widget _buildSaveButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: _isProcessing ? null : _showSaveConfirmation,
-        icon: _isProcessing 
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-              )
-            : const Icon(Icons.save),
-        label: Text(_isProcessing ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'),
-        style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          backgroundColor: Theme.of(context).primaryColor,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildClearButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: _isProcessing ? null : _showClearConfirmation,
-        icon: const Icon(Icons.clear),
-        label: const Text('ล้างข้อมูล'),
-        style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-      ),
     );
   }
 
   Widget _buildLoadingOverlay() {
     return Container(
-      color: Colors.black.withOpacity(0.3),
+      color: Colors.black.withOpacity(0.5),
       child: const Center(
         child: Card(
           child: Padding(
-            padding: EdgeInsets.all(20),
+            padding: EdgeInsets.all(20.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -792,3 +940,5 @@ class _AddReceiptPageState extends State<AddReceiptPage> {
     );
   }
 }
+// ReceiptData class definition is removed to avoid duplicate type error.
+// Use the ReceiptData class from services/receipt_service.dart. });

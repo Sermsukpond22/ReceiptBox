@@ -1,79 +1,133 @@
+// services/google_vision_service.dart
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:intl/intl.dart';
+import 'package:run_android/services/models/receipt_ocr_result.dart';
+import 'package:run_android/services/receipt_text_analyzer.dart';
 
-class VisionOCRService {
-  static Future<String> scanTextFromImage(File imageFile) async {
+class GoogleVisionService {
+  // Google Cloud Vision API configuration
+  static const String _baseUrl = 'https://vision.googleapis.com/v1/images:annotate';
+  
+  // ดึง API Key จาก .env file
+  static String get _apiKey {
     final apiKey = dotenv.env['GOOGLE_VISION_API_KEY'];
-    final url = Uri.parse(
-        'https://vision.googleapis.com/v1/images:annotate?key=$apiKey');
+    if (apiKey == null || apiKey.isEmpty) {
+      throw Exception('GOOGLE_VISION_API_KEY not found in .env file');
+    }
+    return apiKey;
+  }
+  
+  // Singleton pattern
+  static final GoogleVisionService _instance = GoogleVisionService._internal();
+  factory GoogleVisionService() => _instance;
+  GoogleVisionService._internal();
 
-    final bytes = await imageFile.readAsBytes();
-    final base64Image = base64Encode(bytes);
+  /// สแกนใบเสร็จและดึงข้อมูลออกมา
+  Future<ReceiptOCRResult> scanReceipt(File imageFile) async {
+    try {
+      // อ่านไฟล์รูปภาพและแปลงเป็น base64
+      final imageBytes = await imageFile.readAsBytes();
+      final base64Image = base64Encode(imageBytes);
+      
+      // สร้าง request body สำหรับ Vision API
+      final requestBody = _buildVisionApiRequest(base64Image);
+      
+      // เรียก Google Vision API
+      final response = await _callVisionApi(requestBody);
+      
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        
+        // แปลงผลลัพธ์จาก API เป็นข้อมูลใบเสร็จ
+        return _parseReceiptData(responseData);
+      } else {
+        throw Exception('Vision API Error: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Failed to scan receipt: $e');
+    }
+  }
 
-    final requestPayload = {
-      "requests": [
+  /// สร้าง request body สำหรับ Google Vision API
+  Map<String, dynamic> _buildVisionApiRequest(String base64Image) {
+    return {
+      'requests': [
         {
-          "image": {
-            "content": base64Image,
+          'image': {
+            'content': base64Image,
           },
-          "features": [
+          'features': [
             {
-              "type": "TEXT_DETECTION",
+              'type': 'TEXT_DETECTION',
+              'maxResults': 50,
+            },
+            {
+              'type': 'DOCUMENT_TEXT_DETECTION',
+              'maxResults': 50,
             }
-          ]
+          ],
+          'imageContext': {
+            'languageHints': ['th', 'en'], // รองรับภาษาไทยและอังกฤษ
+          }
         }
       ]
     };
+  }
 
-    final response = await http.post(
+  /// เรียก Google Vision API
+  Future<http.Response> _callVisionApi(Map<String, dynamic> requestBody) async {
+    final url = Uri.parse('$_baseUrl?key=$_apiKey');
+    
+    return await http.post(
       url,
-      headers: {"Content-Type": "application/json"},
-      body: json.encode(requestPayload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: json.encode(requestBody),
     );
+  }
 
-    if (response.statusCode == 200) {
-      final jsonResponse = json.decode(response.body);
-      final textAnnotations = jsonResponse['responses'][0]['textAnnotations'];
-      if (textAnnotations != null && textAnnotations.isNotEmpty) {
-        return textAnnotations[0]['description'];
-      } else {
-        return 'ไม่พบข้อความในภาพ';
+  /// แปลงผลลัพธ์จาก Vision API เป็นข้อมูลใบเสร็จ
+  ReceiptOCRResult _parseReceiptData(Map<String, dynamic> responseData) {
+    try {
+      // ดึงข้อความทั้งหมดจาก response
+      final responses = responseData['responses'] as List?;
+      if (responses == null || responses.isEmpty) {
+        return ReceiptOCRResult.empty();
       }
-    } else {
-      throw Exception('OCR ผิดพลาด: ${response.body}');
+
+      final textAnnotations = responses[0]['textAnnotations'] as List?;
+      if (textAnnotations == null || textAnnotations.isEmpty) {
+        return ReceiptOCRResult.empty();
+      }
+
+      // ดึงข้อความทั้งหมด
+      final fullText = textAnnotations[0]['description'] as String? ?? '';
+      
+      // แยกข้อความเป็นบรรทัด
+      final lines = fullText.split('\n').map((line) => line.trim()).toList();
+      final cleanLines = lines.where((line) => line.isNotEmpty).toList();
+
+      // วิเคราะห์ข้อมูลจากข้อความ
+      return _analyzeReceiptText(cleanLines);
+    } catch (e) {
+      throw Exception('Failed to parse receipt data: $e');
     }
   }
 
-  static double? extractAmount(String text) {
-    final RegExp amountRegex = RegExp(r'(\d+[.,]?\d{0,2})');
-    final matches = amountRegex.allMatches(text);
-
-    if (matches.isNotEmpty) {
-      // เอาตัวเลขที่มากที่สุด (น่าจะเป็นราคารวม)
-      final amounts = matches.map((m) => double.tryParse(m.group(1)!.replaceAll(',', '')) ?? 0).toList();
-      return amounts.reduce((a, b) => a > b ? a : b);
-    }
-    return null;
-  }
-
-  static DateTime? extractDate(String text) {
-    final RegExp dateRegex = RegExp(
-      r'(\d{1,2}/\d{1,2}/\d{2,4})|(\d{4}-\d{2}-\d{2})',
+  /// วิเคราะห์ข้อมูลจากข้อความที่สแกนได้
+  ReceiptOCRResult _analyzeReceiptText(List<String> lines) {
+    final analyzer = ReceiptTextAnalyzer();
+    
+    return ReceiptOCRResult(
+      storeName: analyzer.extractStoreName(lines),
+      amount: analyzer.extractAmount(lines),
+      date: analyzer.extractDate(lines),
+      description: analyzer.extractDescription(lines),
+      rawText: lines.join('\n'),
+      confidence: analyzer.calculateConfidence(lines),
     );
-
-    final match = dateRegex.firstMatch(text);
-    if (match != null) {
-      try {
-        return DateFormat('dd/MM/yyyy').parse(match.group(0)!);
-      } catch (_) {
-        try {
-          return DateFormat('yyyy-MM-dd').parse(match.group(0)!);
-        } catch (_) {}
-      }
-    }
-    return null;
   }
 }
