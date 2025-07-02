@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:run_android/Screen/Pages/AddReceipt_page.dart';
+import 'package:run_android/Screen/Pages/ReceiptPage.dart/AddReceipt_page.dart';
 import 'package:run_android/Screen/Pages/chat_page.dart';
 import 'package:run_android/Screen/Pages/document_page.dart';
 import 'package:run_android/Screen/Pages/home_page.dart';

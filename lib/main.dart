@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:run_android/Screen/HomeScreen.dart';
 import 'package:run_android/Screen/LoginScreen.dart';
 import 'package:run_android/Screen/OnboardingScreen.dart';
-import 'package:run_android/Screen/Pages/AddReceipt_page.dart';
+import 'package:run_android/Screen/Pages/ReceiptPage.dart/AddReceipt_page.dart';
 import 'package:run_android/Screen/Pages/document_page.dart';
 import 'package:run_android/Screen/SplashScreen.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -105,8 +105,9 @@ class MyApp extends StatelessWidget {
         '/onboarding': (context) => OnboardingScreen(),
         '/login': (context) => LoginScreen(),
         '/home': (context) => HomeScreen(),
-        '/add_receipt': (context) => AddReceiptPage(),
         '/document': (context) => DocumentPage(),
+        '/add_receipt': (context) => AddReceiptPage(),
+        
       },
     );
   }

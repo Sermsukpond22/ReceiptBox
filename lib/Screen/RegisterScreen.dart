@@ -1,12 +1,11 @@
-import 'dart:async'; // เพิ่ม import นี้สำหรับ Future.delayed
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart'; 
 import 'package:image_picker/image_picker.dart';
 import 'package:cool_alert/cool_alert.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:run_android/services/auth-service.dart';
 
 
 
@@ -41,30 +40,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  Future<String?> uploadProfileImage(String uid) async {
-    if (_profileImage == null) return null;
-
-    try {
-      final ref =
-          FirebaseStorage.instance.ref().child('profile_images/$uid.jpg');
-      await ref.putFile(_profileImage!);
-      return await ref.getDownloadURL();
-    } catch (e) {
-      print('Image upload error: $e');
-      return null;
-    }
-  }
-
   Future<void> registerUser() async {
+    // 1. ตรวจสอบความถูกต้องของข้อมูล (Validation)
     setState(() {
       isNameValid = nameController.text.trim().isNotEmpty;
-      isPhoneValid =
-          RegExp(r'^[0-9]{9,10}$').hasMatch(phoneController.text.trim());
-      isEmailValid = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-          .hasMatch(emailController.text.trim());
+      isPhoneValid = RegExp(r'^[0-9]{9,10}$').hasMatch(phoneController.text.trim());
+      isEmailValid = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(emailController.text.trim());
       isPasswordValid = passwordController.text.length >= 6;
-      isConfirmPasswordValid =
-          passwordController.text == confirmPasswordController.text;
+      isConfirmPasswordValid = passwordController.text == confirmPasswordController.text;
     });
 
     if (!isNameValid ||
@@ -72,6 +55,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
         !isEmailValid ||
         !isPasswordValid ||
         !isConfirmPasswordValid) {
+      // หากข้อมูลไม่ถูกต้อง ให้หยุดทำงาน
+      return;
+    }
+
+    // ตรวจสอบว่ามีรูปโปรไฟล์เลือกไว้หรือไม่
+    if (_profileImage == null) {
+      if (!mounted) return;
+      CoolAlert.show(
+        context: context,
+        type: CoolAlertType.warning,
+        title: "คำเตือน",
+        text: "กรุณาเลือกรูปโปรไฟล์",
+      );
       return;
     }
 
@@ -80,56 +76,46 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     try {
-      final UserCredential userCredential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(
-              email: emailController.text.trim(),
-              password: passwordController.text.trim());
-
-      final String uid = userCredential.user!.uid;
-      final String? imageUrl = await uploadProfileImage(uid);
-
-      await FirebaseFirestore.instance.collection('users').doc(uid).set({
-        'UserID': uid,
-        'Role': 'user',
-        'Email': emailController.text.trim(),
-        'FullName': nameController.text.trim(),
-        'PhoneNumber': phoneController.text.trim(),
-        'CreatedAt': FieldValue.serverTimestamp(),
-        'LastLogin': FieldValue.serverTimestamp(),
-        'Status': 'active',
-        'ProfileImage': imageUrl ?? '',
-      });
-
+      // 2. เรียกใช้ AuthService เพื่อทำการลงทะเบียน
+      await AuthService.registerUser(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+        fullName: nameController.text.trim(),
+        phoneNumber: phoneController.text.trim(),
+        profileImageFile: _profileImage!, // ส่ง File เข้าไปตรงๆ
+      );
 
       // ตรวจสอบว่า widget ยังคงอยู่ใน tree หลังจาก delay
       if (!mounted) return;
 
-      // 2. แสดง Alert แจ้งเตือนสมัครสำเร็จ
+      // 3. แสดง Alert แจ้งเตือนสมัครสำเร็จ
       CoolAlert.show(
         context: context,
         type: CoolAlertType.success,
         text: "สมัครสมาชิกสำเร็จ!",
         confirmBtnText: 'ตกลง',
         confirmBtnColor: Colors.green,
-        barrierDismissible: false, // ป้องกันการปิด Alert โดยการแตะข้างนอก
+        barrierDismissible: false,
         onConfirmBtnTap: () {
-          // Pop Alert ออกไปก่อน
           Navigator.of(context, rootNavigator: true).pop();
-          // 3. เด้งไปที่หน้า LoginScreen
-          // หากคุณไม่ได้ใช้ named route '/loginScreen', ให้เปลี่ยนเป็น:
-          // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginScreen()));
-          Navigator.pushReplacementNamed(context, '/login');
+          Navigator.pushReplacementNamed(context, '/login'); // หรือเปลี่ยนเป็น LoginScreen() ถ้าไม่ได้ใช้ Named Routes
         },
       );
-      // ---- จบส่วนที่แก้ไข ----
-
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
+      String errorMessage = "ไม่สามารถสมัครสมาชิกได้";
+      if (e.code == 'weak-password') {
+        errorMessage = 'รหัสผ่านอ่อนเกินไป';
+      } else if (e.code == 'email-already-in-use') {
+        errorMessage = 'อีเมลนี้ถูกใช้งานแล้ว';
+      } else if (e.code == 'invalid-email') {
+        errorMessage = 'รูปแบบอีเมลไม่ถูกต้อง';
+      }
       CoolAlert.show(
         context: context,
         type: CoolAlertType.error,
         title: "เกิดข้อผิดพลาด",
-        text: e.message ?? "ไม่สามารถสมัครสมาชิกได้",
+        text: errorMessage,
       );
     } catch (e) {
       if (!mounted) return;
@@ -140,7 +126,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         text: "บางอย่างผิดพลาด: $e",
       );
     } finally {
-      // ตรวจสอบว่า widget ยังคงอยู่ใน tree ก่อนเรียก setState
       if (mounted) {
         setState(() {
           isLoading = false;

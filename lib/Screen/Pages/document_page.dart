@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:run_android/services/receipt_service.dart';
@@ -6,23 +6,25 @@ import 'package:run_android/services/receipt_service.dart';
 class DocumentPage extends StatelessWidget {
   final ReceiptService _receiptService = ReceiptService();
 
+  DocumentPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('ใบเสร็จของฉัน')),
+      appBar: AppBar(title: const Text('ใบเสร็จของฉัน')),
       body: StreamBuilder<QuerySnapshot>(
         stream: _receiptService.getUserReceipts(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator());
           }
 
           if (snapshot.hasError) {
-            return Center(child: Text('เกิดข้อผิดพลาดในการโหลดข้อมูล'));
+            return const Center(child: Text('เกิดข้อผิดพลาดในการโหลดข้อมูล'));
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(child: Text('ยังไม่มีใบเสร็จ'));
+            return const Center(child: Text('ยังไม่มีใบเสร็จ'));
           }
 
           final receipts = snapshot.data!.docs;
@@ -32,29 +34,46 @@ class DocumentPage extends StatelessWidget {
             itemBuilder: (context, index) {
               final data = receipts[index].data() as Map<String, dynamic>;
 
-              final String storeName = (data['storeName'] as String?) ?? 'ไม่มีชื่อร้าน';
-              final double amount = data['amount'] != null ? (data['amount'] as num).toDouble() : 0.0;
-              final DateTime transactionDate = data['transactionDate'] != null
-                  ? (data['transactionDate'] as Timestamp).toDate()
-                  : DateTime.now();
-              final String? imageUrl = data['imageUrl'] as String?;
+              final String storeName = (data['storeName'] as String?)?.isNotEmpty == true
+                  ? data['storeName'] as String
+                  : 'ไม่มีชื่อร้าน';
+
+              final double amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
+
+              final Timestamp? timestamp = data['transactionDate'] as Timestamp?;
+              final DateTime transactionDate = timestamp?.toDate() ?? DateTime.now();
+
+              final String? imageUrl = (data['imageUrl'] as String?)?.isNotEmpty == true ? data['imageUrl'] as String : null;
 
               return Card(
-                margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 elevation: 3,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 child: ListTile(
                   leading: imageUrl != null
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: Image.network(imageUrl, width: 50, height: 50, fit: BoxFit.cover),
+                          child: Image.network(
+                            imageUrl,
+                            width: 50,
+                            height: 50,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => const Icon(
+                              Icons.broken_image,
+                              size: 40,
+                              color: Colors.grey,
+                            ),
+                          ),
                         )
-                      : Icon(Icons.receipt_long, size: 40, color: Colors.grey[600]),
+                      : const Icon(Icons.receipt_long, size: 40, color: Colors.grey),
                   title: Text(storeName),
-                  subtitle: Text('฿ ${amount.toStringAsFixed(2)} • ${DateFormat('dd MMM yyyy').format(transactionDate)}'),
-                  trailing: Icon(Icons.arrow_forward_ios),
+                  subtitle: Text(
+                    '฿ ${amount.toStringAsFixed(2)} • ${DateFormat('dd MMM yyyy', 'th_TH').format(transactionDate)}',
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  trailing: const Icon(Icons.arrow_forward_ios),
                   onTap: () {
-                    // TODO: ไปยังหน้ารายละเอียดใบเสร็จ
+                    // TODO: ไปยังหน้ารายละเอียดใบเสร็จ (Detail Page)
                   },
                 ),
               );

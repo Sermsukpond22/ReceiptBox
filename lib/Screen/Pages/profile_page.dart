@@ -117,7 +117,7 @@ class _ProfilePageState extends State<ProfilePage> {
         onChanged: (bool value) {
           setState(() {
             _notificationsEnabled = value;
-            // TODO: บันทึกค่า _notificationsEnabled นี้ (เช่น ลง Firestore หรือ SharedPreferences)
+           
             // ตัวอย่าง:
             // if (FirebaseAuth.instance.currentUser != null) {
             //   FirebaseFirestore.instance
