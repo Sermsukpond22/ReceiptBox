@@ -8,12 +8,19 @@ import 'package:run_android/Screen/Pages/document_page.dart';
 import 'package:run_android/Screen/SplashScreen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:intl/date_symbol_data_local.dart'; // เพิ่ม import นี้
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: '.env');
   await Firebase.initializeApp(); // เริ่มต้น Firebase
-  
+
+  // ***************************************************************
+  // ส่วนสำคัญ: เรียกใช้ initializeDateFormatting() เพื่อเริ่มต้นข้อมูลภาษา
+  // เราจะเริ่มต้นสำหรับภาษาไทย ('th')
+  // ***************************************************************
+  await initializeDateFormatting('th', null);
+
   runApp(MyApp());
 }
 
@@ -99,7 +106,7 @@ class MyApp extends StatelessWidget {
           Theme.of(context).textTheme, // ผสมผสานกับ TextTheme Default ของ Flutter
         ),
       ),
-      initialRoute: '/login', // ควรเริ่มที่ SplashScreen ก่อน
+      initialRoute: '/splash', // ควรเริ่มที่ SplashScreen ก่อน
       routes: {
         '/splash': (context) => SplashScreen(),
         '/onboarding': (context) => OnboardingScreen(),
@@ -107,7 +114,6 @@ class MyApp extends StatelessWidget {
         '/home': (context) => HomeScreen(),
         '/document': (context) => DocumentPage(),
         '/add_receipt': (context) => AddReceiptPage(),
-        
       },
     );
   }

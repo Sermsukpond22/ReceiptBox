@@ -43,6 +43,7 @@ dependencies:
   cloud_firestore: ^5.6.7
   cool_alert: ^2.0.0
   path: ^1.8.0
+  intl: ^0.18.1
   google_fonts: ^6.1.0
   path_provider: ^2.0.15
   googleapis: ^13.1.0
