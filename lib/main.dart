@@ -4,7 +4,9 @@ import 'package:run_android/Screen/HomeScreen.dart';
 import 'package:run_android/Screen/LoginScreen.dart';
 import 'package:run_android/Screen/OnboardingScreen.dart';
 import 'package:run_android/Screen/Pages/ReceiptPage.dart/AddReceipt_page.dart';
+import 'package:run_android/Screen/Pages/chat_page.dart';
 import 'package:run_android/Screen/Pages/document_page.dart';
+import 'package:run_android/Screen/Pages/profile_page.dart';
 import 'package:run_android/Screen/SplashScreen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -106,7 +108,7 @@ class MyApp extends StatelessWidget {
           Theme.of(context).textTheme, // ผสมผสานกับ TextTheme Default ของ Flutter
         ),
       ),
-      initialRoute: '/splash', // ควรเริ่มที่ SplashScreen ก่อน
+      initialRoute: '/login', // ควรเริ่มที่ SplashScreen ก่อน
       routes: {
         '/splash': (context) => SplashScreen(),
         '/onboarding': (context) => OnboardingScreen(),
@@ -114,6 +116,8 @@ class MyApp extends StatelessWidget {
         '/home': (context) => HomeScreen(),
         '/document': (context) => DocumentPage(),
         '/add_receipt': (context) => AddReceiptPage(),
+        '/chatBot': (context) => ChatPage(), // แก้ไขชื่อให้ตรงกับชื่อคลาส
+        '/profile': (context) => ProfilePage(), // เพิ่มเส้นทางสำหรับ ProfilePage
       },
     );
   }

@@ -1,11 +1,8 @@
-// receipt_service.dart
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-// import 'package:intl/intl.dart';
-
-
+//import 'package:run_android/services/categories_service.dart'; // Import the categories service
 
 // Model สำหรับข้อมูลใบเสร็จ
 class ReceiptData {
@@ -15,6 +12,7 @@ class ReceiptData {
   final DateTime transactionDate;
   final String? imageUrl;
   final File? imageFile;
+  final String? categoryId; // Added categoryId
 
   ReceiptData({
     this.storeName,
@@ -23,6 +21,7 @@ class ReceiptData {
     required this.transactionDate,
     this.imageUrl,
     this.imageFile,
+    this.categoryId, // Added categoryId to constructor
   });
 }
 
@@ -39,7 +38,7 @@ class ReceiptService {
 
   // ตรวจสอบการเข้าสู่ระบบ
   User? get currentUser => _auth.currentUser;
-  
+
   bool get isUserLoggedIn => currentUser != null;
 
   // อัปโหลดรูปภาพไป Firebase Storage
@@ -101,6 +100,7 @@ class ReceiptService {
         'amount': receiptData.amount,
         'transactionDate': Timestamp.fromDate(receiptData.transactionDate),
         'createdAt': FieldValue.serverTimestamp(),
+        'categoryId': receiptData.categoryId, // Added categoryId here
       };
 
       // เพิ่ม imageUrl ถ้ามี
@@ -140,6 +140,7 @@ class ReceiptService {
         'amount': receiptData.amount,
         'transactionDate': Timestamp.fromDate(receiptData.transactionDate),
         'updatedAt': FieldValue.serverTimestamp(),
+        'categoryId': receiptData.categoryId, // Added categoryId here
       };
 
       // เพิ่ม imageUrl ถ้ามี
@@ -184,6 +185,7 @@ class ReceiptService {
   Stream<QuerySnapshot> getUserReceipts({
     int? limit,
     DocumentSnapshot? startAfter,
+    String? categoryId, // Added categoryId for filtering
   }) {
     final user = currentUser;
     if (user == null) {
@@ -194,6 +196,10 @@ class ReceiptService {
         .collection('receipts')
         .where('userId', isEqualTo: user.uid)
         .orderBy('transactionDate', descending: true);
+
+    if (categoryId != null && categoryId.isNotEmpty) {
+      query = query.where('categoryId', isEqualTo: categoryId);
+    }
 
     if (startAfter != null) {
       query = query.startAfterDocument(startAfter);
@@ -222,25 +228,32 @@ class ReceiptService {
   Stream<QuerySnapshot> getReceiptsByDateRange({
     required DateTime startDate,
     required DateTime endDate,
+    String? categoryId, // Added categoryId for filtering
   }) {
     final user = currentUser;
     if (user == null) {
       throw Exception('กรุณาเข้าสู่ระบบก่อนใช้งาน');
     }
 
-    return _firestore
+    Query query = _firestore
         .collection('receipts')
         .where('userId', isEqualTo: user.uid)
         .where('transactionDate', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
         .where('transactionDate', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
-        .orderBy('transactionDate', descending: true)
-        .snapshots();
+        .orderBy('transactionDate', descending: true);
+
+    if (categoryId != null && categoryId.isNotEmpty) {
+      query = query.where('categoryId', isEqualTo: categoryId);
+    }
+
+    return query.snapshots();
   }
 
   // คำนวณยอดรวมในช่วงวันที่
   Future<double> calculateTotalAmount({
     required DateTime startDate,
     required DateTime endDate,
+    String? categoryId, // Added categoryId for filtering
   }) async {
     try {
       final user = currentUser;
@@ -248,12 +261,17 @@ class ReceiptService {
         throw Exception('กรุณาเข้าสู่ระบบก่อนใช้งาน');
       }
 
-      final QuerySnapshot snapshot = await _firestore
+      Query query = _firestore
           .collection('receipts')
           .where('userId', isEqualTo: user.uid)
           .where('transactionDate', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
-          .where('transactionDate', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
-          .get();
+          .where('transactionDate', isLessThanOrEqualTo: Timestamp.fromDate(endDate));
+
+      if (categoryId != null && categoryId.isNotEmpty) {
+        query = query.where('categoryId', isEqualTo: categoryId);
+      }
+
+      final QuerySnapshot snapshot = await query.get();
 
       double total = 0.0;
       for (var doc in snapshot.docs) {
