@@ -2,7 +2,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:run_android/services/models/receipt_ocr_result.dart';
+import 'package:run_android/services/receipt_ocr_result.dart';
 import 'package:run_android/services/vision_ocr_service.dart';
 
 

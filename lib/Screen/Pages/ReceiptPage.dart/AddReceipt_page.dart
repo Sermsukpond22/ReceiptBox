@@ -7,7 +7,7 @@ import 'package:run_android/Screen/Pages/ReceiptPage.dart/Widgets/action_buttons
 import 'package:run_android/Screen/Pages/ReceiptPage.dart/Widgets/receipt_form.dart';
 import 'package:run_android/Screen/Pages/ReceiptPage.dart/Widgets/receipt_image_section.dart';
 import 'package:run_android/Screen/Pages/ReceiptPage.dart/Widgets/ui_utils.dart';
-import 'package:run_android/services/models/receipt_ocr_result.dart';
+import 'package:run_android/services/receipt_ocr_result.dart';
 import 'package:run_android/services/receipt_service.dart';
 import 'package:run_android/Screen/Pages/ReceiptPage.dart/Widgets/receipt_scanner_widget.dart';
 

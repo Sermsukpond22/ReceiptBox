@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:run_android/services/models/receipt_ocr_result.dart';
+import 'package:run_android/services/receipt_ocr_result.dart';
 import 'package:run_android/services/receipt_text_analyzer.dart';
 
 class GoogleVisionService {

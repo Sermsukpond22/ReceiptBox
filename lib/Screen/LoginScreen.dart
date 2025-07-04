@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cool_alert/cool_alert.dart';
-import 'package:run_android/Screen/Admin/AdminScreen.dart';
+import 'package:run_android/Admin/AdminScreen.dart';
 import 'package:run_android/Screen/RegisterScreen.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'HomeScreen.dart';

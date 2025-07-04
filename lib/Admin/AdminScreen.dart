@@ -2,8 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'package:run_android/Screen/Admin/AdminSettingsScreen.dart';
-import 'package:run_android/Screen/Admin/UserManagementScreen.dart';
+import 'package:run_android/Admin/AdminSettingsScreen.dart';
+import 'package:run_android/Admin/UserManagementScreen.dart';
 
 
 

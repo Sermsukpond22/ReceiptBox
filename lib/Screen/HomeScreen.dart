@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:run_android/Screen/Pages/ReceiptPage.dart/AddReceipt_page.dart';
 import 'package:run_android/Screen/Pages/chat_page.dart';
-import 'package:run_android/Screen/Pages/document_page.dart';
+import 'package:run_android/Screen/Pages/Category_manage/category_page.dart';
 import 'package:run_android/Screen/Pages/home_page.dart';
 import 'package:run_android/Screen/Pages/profile_page.dart';
 
@@ -17,7 +17,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<Widget> _pages = [
     HomePage(),
-    DocumentPage(),
+    CategoryPage(),
     AddReceiptPage(),
     ChatPage(),
     ProfilePage(),

@@ -1,42 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:run_android/models/category_model.dart';
 
-/// Model for category data
-class Category {
-  final String id;
-  final String name;
-  final String? userId; // null = default
-  final Timestamp createdAt;
-  final Timestamp? updatedAt;
 
-  Category({
-    required this.id,
-    required this.name,
-    required this.userId,
-    required this.createdAt,
-    this.updatedAt,
-  });
-
-  factory Category.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return Category(
-      id: doc.id,
-      name: data['name'] as String,
-      userId: data['userId'] as String?,
-      createdAt: data['createdAt'] as Timestamp,
-      updatedAt: data['updatedAt'] as Timestamp?,
-    );
-  }
-
-  Map<String, dynamic> toFirestore() {
-    return {
-      'name': name,
-      'userId': userId,
-      'createdAt': createdAt,
-      'updatedAt': updatedAt,
-    };
-  }
-}
 
 /// Service for managing categories
 class CategoryService {
@@ -84,33 +50,32 @@ class CategoryService {
 
   /// ✅ Fetches both default and user-specific categories
   Stream<List<Category>> getAllCategoriesForUser() async* {
-  final user = currentUser;
-  if (user == null) throw Exception('กรุณาเข้าสู่ระบบก่อนใช้งาน');
+    final user = currentUser;
+    if (user == null) throw Exception('กรุณาเข้าสู่ระบบก่อนใช้งาน');
 
-  final defaultQuery = _firestore
-      .collection('categories')
-      .where('userId', isNull: true)
-      .orderBy('name')
-      .snapshots();
+    final defaultQuery = _firestore
+        .collection('categories')
+        .where('userId', isNull: true)
+        .orderBy('name')
+        .snapshots();
 
-  final userQuery = _firestore
-      .collection('categories')
-      .where('userId', isEqualTo: user.uid)
-      .orderBy('name')
-      .snapshots();
+    final userQuery = _firestore
+        .collection('categories')
+        .where('userId', isEqualTo: user.uid)
+        .orderBy('name')
+        .snapshots();
 
-  await for (final defaultSnap in defaultQuery) {
-    final defaultCategories = defaultSnap.docs.map((doc) => Category.fromFirestore(doc)).toList();
+    await for (final defaultSnap in defaultQuery) {
+      final defaultCategories = defaultSnap.docs.map((doc) => Category.fromFirestore(doc)).toList();
 
-    await for (final userSnap in userQuery) {
-      final userCategories = userSnap.docs.map((doc) => Category.fromFirestore(doc)).toList();
+      await for (final userSnap in userQuery) {
+        final userCategories = userSnap.docs.map((doc) => Category.fromFirestore(doc)).toList();
 
-      yield [...defaultCategories, ...userCategories];
-      break; // yield one combined result only
+        yield [...defaultCategories, ...userCategories];
+        break; // yield one combined result only
+      }
     }
   }
-}
-
 
   /// ✅ Updates a custom category (not allowed for default)
   Future<void> updateCategory(String categoryId, String newName) async {
