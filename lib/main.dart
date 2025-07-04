@@ -6,7 +6,7 @@ import 'package:run_android/Screen/OnboardingScreen.dart';
 import 'package:run_android/Screen/Pages/ReceiptPage.dart/AddReceipt_page.dart';
 import 'package:run_android/Screen/Pages/chat_page.dart';
 import 'package:run_android/Screen/Pages/Category_manage/category_page.dart';
-import 'package:run_android/Screen/Pages/profile_page.dart';
+import 'package:run_android/Screen/Pages/ProfilePage/profile_page.dart';
 import 'package:run_android/Screen/SplashScreen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';

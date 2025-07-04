@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:run_android/services/receipt_ocr_result.dart';
-import 'package:run_android/services/receipt_text_analyzer.dart';
+import 'package:run_android/services/OCR-service/receipt_ocr_result.dart';
+import 'package:run_android/services/OCR-service/receipt_text_analyzer.dart';
 
 class GoogleVisionService {
   // Google Cloud Vision API configuration

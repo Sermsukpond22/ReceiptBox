@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 //import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-import 'package:run_android/services/receipt_ocr_result.dart'; // Import a- OCR result model
+import 'package:run_android/services/OCR-service/receipt_ocr_result.dart'; // Import a- OCR result model
 
 class UiUtils {
   // --- SNACKBARS ---
