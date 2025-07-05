@@ -55,7 +55,7 @@ class _AddCategoryDialogState extends State<AddCategoryDialog> {
       actions: [
         TextButton(
           onPressed: () {
-            Navigator.of(context).pop(); // Close dialog without returning value
+            Navigator.of(context).pop(); // ปิด Dialog โดยไม่ส่งค่ากลับ
           },
           child: Text(
             'ยกเลิก',
@@ -65,7 +65,8 @@ class _AddCategoryDialogState extends State<AddCategoryDialog> {
         ElevatedButton(
           onPressed: () {
             if (_formKey.currentState!.validate()) {
-              Navigator.of(context).pop(_categoryNameController.text.trim()); // Return category name
+              // ส่งชื่อหมวดหมู่ที่กรอกกลับไปยังหน้าจอที่เรียก
+              Navigator.of(context).pop(_categoryNameController.text.trim()); 
             }
           },
           style: ElevatedButton.styleFrom(

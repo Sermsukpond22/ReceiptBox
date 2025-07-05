@@ -55,7 +55,7 @@ class ProfileHeader extends StatelessWidget {
                   child: CircleAvatar(
                     radius: 60,
                     backgroundColor: Colors.grey.shade200,
-                    backgroundImage: hasProfileImage ? NetworkImage(profileImageUrl!) : null,
+                    backgroundImage: hasProfileImage ? NetworkImage(profileImageUrl) : null,
                     child: !hasProfileImage
                         ? Icon(Icons.person, size: 60, color: Colors.grey.shade600)
                         : null,

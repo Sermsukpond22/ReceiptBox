@@ -10,7 +10,7 @@ import 'package:run_android/Screen/Pages/ProfilePage/profile_page.dart';
 import 'package:run_android/Screen/SplashScreen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:intl/date_symbol_data_local.dart'; // เพิ่ม import นี้
+import 'package:intl/date_symbol_data_local.dart'; 
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -108,7 +108,7 @@ class MyApp extends StatelessWidget {
           Theme.of(context).textTheme, // ผสมผสานกับ TextTheme Default ของ Flutter
         ),
       ),
-      initialRoute: '/login', // ควรเริ่มที่ SplashScreen ก่อน
+      initialRoute: '/login', // เริ่มที่ SplashScreen 
       routes: {
         '/splash': (context) => SplashScreen(),
         '/onboarding': (context) => OnboardingScreen(),
@@ -117,7 +117,7 @@ class MyApp extends StatelessWidget {
         '/category': (context) => CategoryPage(),
         '/add_receipt': (context) => AddReceiptPage(),
         '/chatBot': (context) => ChatPage(), 
-        '/profile': (context) => ProfilePage(), // เพิ่มเส้นทางสำหรับ ProfilePage
+        '/profile': (context) => ProfilePage(), 
       },
     );
   }

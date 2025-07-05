@@ -8,8 +8,8 @@ import 'package:run_android/Screen/Pages/ProfilePage/Widgets/profile_action_item
 import 'package:run_android/Screen/Pages/ProfilePage/Widgets/profile_header.dart';
 
 // ตรวจสอบว่า path ไปยังหน้า EditProfilePage และ ChangePasswordPage ถูกต้อง
-import 'package:run_android/Screen/Pages/EditProfile/ChangePasswordPage.dart';
-import 'package:run_android/Screen/Pages/EditProfile/EditProfilePage.dart';
+import 'package:run_android/Screen/Pages/ProfilePage/EditProfile/ChangePasswordPage.dart';
+import 'package:run_android/Screen/Pages/ProfilePage/EditProfile/EditProfilePage.dart';
 import 'package:run_android/services/auth-service.dart';
 
 class ProfilePage extends StatefulWidget {

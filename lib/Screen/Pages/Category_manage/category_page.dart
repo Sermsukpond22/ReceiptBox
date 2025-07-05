@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cool_alert/cool_alert.dart';
 import 'package:run_android/Screen/Pages/Category_manage/Widgets/category_card.dart';
-import 'package:run_android/Screen/Pages/Category_manage/Widgets/category_list_view.dart';
+import 'package:run_android/Screen/Pages/Category_manage/Widgets/receipt_list_page.dart';
 import 'package:run_android/Screen/Pages/Category_manage/Widgets/search_bar.dart';
 import 'package:run_android/Screen/Pages/Category_manage/Widgets/sort_options.dart';
 import 'package:run_android/Screen/Pages/Category_manage/Widgets/statistics_card.dart';
+import 'package:run_android/Screen/Pages/Category_manage/Widgets/add_category_dialog.dart';
+
 import 'package:run_android/models/category_model.dart';
 import 'package:run_android/services/categories_service.dart';
-
 
 class CategoryPage extends StatefulWidget {
   const CategoryPage({Key? key}) : super(key: key);
@@ -24,20 +26,55 @@ class _CategoryPageState extends State<CategoryPage> {
   List<Category> _filterAndSortCategories(List<Category> categories) {
     List<Category> filteredList = categories;
 
-    // Filter by search query
     if (_searchQuery.isNotEmpty) {
       filteredList = categories.where((category) {
         return category.name.toLowerCase().contains(_searchQuery.toLowerCase());
       }).toList();
     }
 
-    // Sort categories by name
     filteredList.sort((a, b) {
       int result = a.name.compareTo(b.name);
       return _isAscending ? result : -result;
     });
 
     return filteredList;
+  }
+
+  Future<void> _showAddCategoryDialog() async {
+    final newCategoryName = await showDialog<String>(
+      context: context,
+      builder: (context) => const AddCategoryDialog(),
+    );
+
+    if (newCategoryName != null && newCategoryName.isNotEmpty) {
+      try {
+        await _categoryService.createCategory(newCategoryName);
+
+        // แสดง CoolAlert แจ้งเตือนความสำเร็จ
+        if (context.mounted) {
+          CoolAlert.show(
+            context: context,
+            type: CoolAlertType.success,
+            text: 'เพิ่มหมวดหมู่ "$newCategoryName" สำเร็จแล้ว!',
+            confirmBtnText: 'ตกลง',
+            backgroundColor: Colors.green.shade100,
+            loopAnimation: false,
+          );
+        }
+
+        setState(() {}); // รีเฟรช UI
+      } catch (e) {
+        if (context.mounted) {
+          CoolAlert.show(
+            context: context,
+            type: CoolAlertType.error,
+            title: 'เกิดข้อผิดพลาด',
+            text: e.toString(),
+            confirmBtnText: 'ปิด',
+          );
+        }
+      }
+    }
   }
 
   @override
@@ -100,7 +137,7 @@ class _CategoryPageState extends State<CategoryPage> {
                       style: GoogleFonts.prompt(fontSize: 18, color: Colors.grey),
                     ));
                   }
-                  
+
                   final allCategories = snapshot.data!;
                   final filteredCategories = _filterAndSortCategories(allCategories);
 
@@ -123,21 +160,27 @@ class _CategoryPageState extends State<CategoryPage> {
                         ),
                       ),
                       SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                             return CategoryCard(category: filteredCategories[index]);
-                          },
-                          childCount: filteredCategories.length,
-                        ),
-                      ),
-                       if(filteredCategories.isEmpty)
-                       SliverFillRemaining(
-                          hasScrollBody: false,
-                          child: CategoryListView(
-                              categories: filteredCategories,
-                              searchQuery: _searchQuery
-                          ),
-                       )
+  delegate: SliverChildBuilderDelegate(
+    (context, index) {
+      final category = filteredCategories[index];
+      return CategoryCard(
+        category: category,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ReceiptList(
+                categoryId: category.id,
+                categoryName: category.name,
+              ),
+            ),
+          );
+        },
+      );
+    },
+    childCount: filteredCategories.length,
+  ),
+),
                     ],
                   );
                 },
@@ -146,11 +189,8 @@ class _CategoryPageState extends State<CategoryPage> {
           ],
         ),
       ),
-       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: Implement create new category dialog/page
-          _categoryService.createCategory("หมวดหมู่ใหม่");
-        },
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showAddCategoryDialog,
         child: const Icon(Icons.add),
         tooltip: 'เพิ่มหมวดหมู่ใหม่',
       ),

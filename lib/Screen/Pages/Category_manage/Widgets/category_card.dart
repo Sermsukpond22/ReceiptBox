@@ -3,16 +3,20 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:run_android/models/category_model.dart';
 
-
 class CategoryCard extends StatelessWidget {
   final Category category;
+  final VoidCallback? onTap; // ✅ เพิ่มพารามิเตอร์ onTap
 
-  const CategoryCard({Key? key, required this.category}) : super(key: key);
+  const CategoryCard({
+    Key? key,
+    required this.category,
+    this.onTap, // ✅ รับ onTap เข้ามา
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final thaiDateFormat = DateFormat('d MMM yyyy', 'th_TH');
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
@@ -30,10 +34,7 @@ class CategoryCard extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () {
-            // TODO: Implement navigation to category detail or edit page
-            print('Tapped on category ID: ${category.id}');
-          },
+          onTap: onTap, // ✅ เรียก onTap ที่ส่งมาจากภายนอก
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -42,13 +43,17 @@ class CategoryCard extends StatelessWidget {
                   width: 50,
                   height: 50,
                   decoration: BoxDecoration(
-                    color: category.isDefault ? Colors.grey[200] : Theme.of(context).primaryColor.withOpacity(0.1),
+                    color: category.isDefault
+                        ? Colors.grey[200]
+                        : Theme.of(context).primaryColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     category.isDefault ? Icons.settings : Icons.label,
                     size: 28,
-                    color: category.isDefault ? Colors.grey[600] : Theme.of(context).primaryColor,
+                    color: category.isDefault
+                        ? Colors.grey[600]
+                        : Theme.of(context).primaryColor,
                   ),
                 ),
                 const SizedBox(width: 16),
