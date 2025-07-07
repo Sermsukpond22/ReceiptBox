@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cool_alert/cool_alert.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // สำหรับการลบและเปลี่ยนรหัสผ่านของผู้ใช้
+import 'package:firebase_auth/firebase_auth.dart';
 
 class UserManagementScreen extends StatefulWidget {
   @override
@@ -14,7 +14,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // ฟังก์ชันสำหรับลบบัญชีผู้ใช้
+  // Function to delete user account
   Future<void> _deleteUser(String userId, String email) async {
     CoolAlert.show(
       context: context,
@@ -23,20 +23,21 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       text: 'คุณแน่ใจหรือไม่ที่จะลบผู้ใช้ ${email}?',
       confirmBtnText: 'ใช่, ลบ',
       cancelBtnText: 'ยกเลิก',
+      confirmBtnColor: Colors.red, // Make the confirm button red for deletion
       onConfirmBtnTap: () async {
         try {
-          // Firebase Auth ไม่ได้มี API สำหรับลบผู้ใช้คนอื่นโดยตรงจากฝั่ง Client
-          // การลบผู้ใช้จาก FirebaseAuth ควรทำผ่าน Cloud Functions หรือ Admin SDK เพื่อความปลอดภัย
-          // สำหรับเดโม่นี้ จะลบแค่ข้อมูลใน Firestore และแจ้งเตือนว่าการลบใน Auth ต้องทำผ่าน Admin SDK
+          // As noted, client-side Firebase Auth doesn't have a direct API to delete other users.
+          // Deleting a user from Firebase Auth should be done via Cloud Functions or Admin SDK for security.
+          // For this demo, we'll only delete the Firestore data and alert about Auth deletion.
           await _firestore.collection('users').doc(userId).delete();
 
-          // แจ้งเตือนเรื่องการลบใน Auth (ควรทำผ่าน Cloud Functions)
           CoolAlert.show(
             context: context,
             type: CoolAlertType.success,
             title: 'ลบข้อมูลสำเร็จ',
-            text: 'ลบข้อมูลผู้ใช้จาก Firestore แล้ว. โปรดทราบว่าการลบบัญชีใน Firebase Authentication ต้องทำผ่าน Cloud Functions หรือ Firebase Admin SDK เพื่อความปลอดภัย.',
-            autoCloseDuration: Duration(seconds: 5),
+            text:
+                'ลบข้อมูลผู้ใช้จาก Firestore แล้ว. โปรดทราบว่าการลบบัญชีใน Firebase Authentication ต้องทำผ่าน Cloud Functions หรือ Firebase Admin SDK เพื่อความปลอดภัย.',
+            autoCloseDuration: const Duration(seconds: 5),
           );
         } catch (e) {
           CoolAlert.show(
@@ -50,12 +51,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     );
   }
 
-  // ฟังก์ชันสำหรับเปลี่ยนรหัสผ่านผู้ใช้
-  // **ข้อควรระวัง:** การเปลี่ยนรหัสผ่านผู้ใช้อื่นโดยตรงผ่าน Client-side Firebase Auth API นั้นทำไม่ได้
-  // คุณจะต้องใช้วิธีที่ปลอดภัยกว่า เช่น:
-  // 1. ส่งอีเมลรีเซ็ตรหัสผ่านไปยังผู้ใช้ (ซึ่งผู้ใช้ต้องดำเนินการเอง)
-  // 2. สร้าง Cloud Function ที่ใช้ Firebase Admin SDK เพื่อเปลี่ยนรหัสผ่าน
-  // สำหรับเดโม่นี้ จะแสดงการส่งอีเมลรีเซ็ตรหัสผ่าน
+  // Function to reset user password
+  // **Caution:** Directly changing another user's password via Client-side Firebase Auth API is not possible.
+  // You should use more secure methods like:
+  // 1. Sending a password reset email to the user (user must act on it).
+  // 2. Creating a Cloud Function that uses Firebase Admin SDK to change the password.
+  // For this demo, we'll show sending a password reset email.
   Future<void> _resetPassword(String email) async {
     try {
       await _auth.sendPasswordResetEmail(email: email);
@@ -63,8 +64,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         context: context,
         type: CoolAlertType.success,
         title: 'ส่งอีเมลรีเซ็ตรหัสผ่านแล้ว',
-        text: 'ได้ส่งอีเมลรีเซ็ตรหัสผ่านไปยัง ${email} เรียบร้อยแล้ว. ผู้ใช้จะต้องดำเนินการตามลิงก์ในอีเมล.',
-        autoCloseDuration: Duration(seconds: 4),
+        text:
+            'ได้ส่งอีเมลรีเซ็ตรหัสผ่านไปยัง ${email} เรียบร้อยแล้ว. ผู้ใช้จะต้องดำเนินการตามลิงก์ในอีเมล.',
+        autoCloseDuration: const Duration(seconds: 4),
       );
     } on FirebaseAuthException catch (e) {
       String message = 'ไม่สามารถส่งอีเมลรีเซ็ตรหัสผ่านได้: ${e.message}';
@@ -88,68 +90,140 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   }
 
   @override
-Widget build(BuildContext context) {
-  return Scaffold(
-    appBar: AppBar(
-      title: Text('จัดการผู้ใช้', style: GoogleFonts.prompt()),
-    ),
-    body: StreamBuilder<QuerySnapshot>(
-      stream: _firestore.collection('users').where('Role', isEqualTo: 'user').snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator());
-        }
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey[50], // Lighter background for the entire screen
+      appBar: AppBar(
+        title: Text(
+          'จัดการผู้ใช้',
+          style: GoogleFonts.prompt(
+            fontWeight: FontWeight.w600, // Make app bar title bolder
+            color: Colors.white, // Text color for app bar
+          ),
+        ),
+        backgroundColor: Colors.indigo, // Consistent app bar color
+        elevation: 0, // Flat design for app bar
+        centerTitle: true, // Center the title
+      ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream:
+            _firestore.collection('users').where('Role', isEqualTo: 'user').snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-        if (snapshot.hasError) {
-          return Center(
-            child: Text(
-              'เกิดข้อผิดพลาด: ${snapshot.error}',
-              style: GoogleFonts.prompt(),
-            ),
-          );
-        }
-
-        if (!snapshot.hasData || snapshot.data == null || snapshot.data!.docs.isEmpty) {
-          return Center(
-            child: Text(
-              'ไม่พบข้อมูลผู้ใช้ทั่วไป',
-              style: GoogleFonts.prompt(),
-            ),
-          );
-        }
-
-        final users = snapshot.data!.docs;
-
-        return ListView.builder(
-          itemCount: users.length,
-          itemBuilder: (context, index) {
-            final user = users[index];
-            final fullName = user['FullName'] ?? 'ไม่ระบุชื่อ';
-            final email = user['Email'] ?? '';
-
-            return ListTile(
-              title: Text(fullName, style: GoogleFonts.prompt()),
-              subtitle: Text(email, style: GoogleFonts.prompt()),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: Icon(Icons.lock_reset, color: Colors.orange),
-                    tooltip: 'รีเซ็ตรหัสผ่าน',
-                    onPressed: () => _resetPassword(email),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.delete, color: Colors.red),
-                    tooltip: 'ลบผู้ใช้',
-                    onPressed: () => _deleteUser(user.id, email),
-                  ),
-                ],
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  'เกิดข้อผิดพลาดในการโหลดข้อมูล: ${snapshot.error}',
+                  style: GoogleFonts.prompt(fontSize: 16, color: Colors.redAccent),
+                  textAlign: TextAlign.center,
+                ),
               ),
             );
-          },
-        );
-      },
-    ),
-  );
-}
+          }
+
+          if (!snapshot.hasData || snapshot.data == null || snapshot.data!.docs.isEmpty) {
+            return Center(
+              child: Text(
+                'ไม่พบข้อมูลผู้ใช้ทั่วไปในระบบ',
+                style: GoogleFonts.prompt(fontSize: 18, color: Colors.grey[600]),
+              ),
+            );
+          }
+
+          final users = snapshot.data!.docs;
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(16.0), // Padding around the list
+            itemCount: users.length,
+            itemBuilder: (context, index) {
+              final user = users[index];
+              final fullName = user['FullName'] ?? 'ไม่ระบุชื่อ';
+              final email = user['Email'] ?? 'ไม่มีอีเมล'; // Default if email is missing
+
+              return Card(
+                margin: const EdgeInsets.symmetric(vertical: 8.0),
+                elevation: 3, // Add a subtle shadow to each user card
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12), // Rounded corners for cards
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                  child: Row(
+                    children: [
+                      // User Avatar (First letter of FullName or a default icon)
+                      CircleAvatar(
+                        backgroundColor: Colors.indigo.shade100,
+                        foregroundColor: Colors.indigo.shade800,
+                        radius: 24,
+                        child: Text(
+                          fullName.isNotEmpty ? fullName[0].toUpperCase() : '?',
+                          style: GoogleFonts.prompt(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              fullName,
+                              style: GoogleFonts.prompt(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey[800],
+                              ),
+                              overflow: TextOverflow.ellipsis, // Handle long names
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              email,
+                              style: GoogleFonts.prompt(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                              ),
+                              overflow: TextOverflow.ellipsis, // Handle long emails
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Action Buttons
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Tooltip(
+                            message: 'รีเซ็ตรหัสผ่าน',
+                            child: IconButton(
+                              icon: Icon(Icons.lock_reset, color: Colors.orange[700]),
+                              onPressed: () => _resetPassword(email),
+                              splashRadius: 24, // Visual feedback on tap
+                            ),
+                          ),
+                          Tooltip(
+                            message: 'ลบผู้ใช้',
+                            child: IconButton(
+                              icon: Icon(Icons.delete, color: Colors.red[700]),
+                              onPressed: () => _deleteUser(user.id, email),
+                              splashRadius: 24, // Visual feedback on tap
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
 }

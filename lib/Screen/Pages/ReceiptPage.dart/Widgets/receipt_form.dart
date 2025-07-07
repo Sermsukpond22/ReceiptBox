@@ -100,6 +100,7 @@ class _ReceiptFormState extends State<ReceiptForm> {
                 onChanged: widget.onCategorySelected,
                 decoration: const InputDecoration(labelText: 'หมวดหมู่'),
               ),
+        const SizedBox(height: 12),
 
         // --- จำนวนเงิน ---
         TextField(

@@ -151,7 +151,7 @@ class _AddReceiptPageState extends State<AddReceiptPage> {
       _handleClear();
     } else if (choice == 'go_to_document') {
       // ไปหน้ารายการใบเสร็จ (เปลี่ยนชื่อ route ตามแอปของคุณ)
-      Navigator.of(context).pushReplacementNamed('/documentPage');
+      Navigator.of(context).pushReplacementNamed('/categoory');
     }
 
   } catch (e) {

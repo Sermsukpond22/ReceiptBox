@@ -1,11 +1,14 @@
+import 'dart:async'; // ✨ 1. Import สำหรับ Debounce
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-
+import 'package:run_android/Screen/Pages/Category_manage/Widgets/receipt_SearchBar.dart';
 import 'receipt_detail_page.dart';
 
-class ReceiptList extends StatelessWidget {
+
+// ✨ 3. แปลงเป็น StatefulWidget
+class ReceiptList extends StatefulWidget {
   final String categoryId;
   final String categoryName;
 
@@ -16,217 +19,226 @@ class ReceiptList extends StatelessWidget {
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    final receiptsRef = FirebaseFirestore.instance
-        .collection('receipts')
-        .where('categoryId', isEqualTo: categoryId)
-        .orderBy('createdAt', descending: true);
+  State<ReceiptList> createState() => _ReceiptListState();
+}
 
-    // กำหนด Theme สีหลักเพื่อง่ายต่อการปรับแก้
+class _ReceiptListState extends State<ReceiptList> {
+  // ✨ 4. สร้าง State สำหรับจัดการการค้นหา
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+  Timer? _debounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  // ฟังก์ชัน Debounce ป้องกันการ query ขณะพิมพ์
+  void _onSearchChanged() {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 400), () {
+      if (mounted) {
+        setState(() {
+          _searchQuery = _searchController.text.trim();
+        });
+      }
+    });
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    setState(() {
+      _searchQuery = '';
+    });
+  }
+
+  // ✨ 5. สร้าง Stream แบบไดนามิกตาม _searchQuery
+  Stream<QuerySnapshot<Map<String, dynamic>>> _buildStream() {
+    Query<Map<String, dynamic>> query = FirebaseFirestore.instance
+        .collection('receipts')
+        .where('categoryId', isEqualTo: widget.categoryId);
+
+    if (_searchQuery.isNotEmpty) {
+      // ค้นหาจาก storeName ที่ขึ้นต้นด้วยคำค้นหา
+      query = query
+          .where('storeName', isGreaterThanOrEqualTo: _searchQuery)
+          .where('storeName', isLessThanOrEqualTo: '$_searchQuery\uf8ff')
+          .orderBy('storeName'); // **สำคัญ:** ต้อง orderBy field ที่ใช้ inequality
+    } else {
+      // ถ้าไม่มีคำค้นหา ให้เรียงตามวันที่สร้างเหมือนเดิม
+      query = query.orderBy('createdAt', descending: true);
+    }
+
+    return query.snapshots();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final primaryColor = theme.primaryColor;
 
     return Scaffold(
-      // เปลี่ยนสีพื้นหลังให้ Card ดูเด่นขึ้น
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        // ทำให้ AppBar ดูสะอาดตา
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 1,
         title: Text(
-          'ใบเสร็จ: $categoryName',
+          'ใบเสร็จ: ${widget.categoryName}',
           style: GoogleFonts.prompt(fontWeight: FontWeight.bold),
         ),
+        // ไม่ต้องมีปุ่มค้นหาที่ AppBar แล้ว
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: receiptsRef.snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator(color: primaryColor));
-          }
-
-          if (snapshot.hasError) {
-            return Center(
-                child: Text('เกิดข้อผิดพลาด: ${snapshot.error}',
-                    style: GoogleFonts.prompt()));
-          }
-
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            // ปรับปรุงหน้าจอเมื่อไม่มีข้อมูล
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.inbox_outlined,
-                    size: 80,
-                    color: Colors.grey[400],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'ยังไม่มีใบเสร็จในหมวดหมู่นี้',
-                    style:
-                        GoogleFonts.prompt(fontSize: 18, color: Colors.grey[600]),
-                  ),
-                  Text(
-                    'ลองเพิ่มใบเสร็จใหม่สิ!',
-                    style: GoogleFonts.prompt(fontSize: 14, color: Colors.grey),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          final docs = snapshot.data!.docs;
-
-          // ใช้ ListView.separated เพื่อเพิ่มเส้นคั่นระหว่างรายการ
-          return ListView.separated(
-            padding: const EdgeInsets.all(16.0), // เพิ่มระยะห่างรอบๆ List
-            itemCount: docs.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 8),
-            itemBuilder: (context, index) {
-              final doc = docs[index];
-              // ปรับปรุงการเข้าถึงข้อมูลให้ปลอดภัยมากขึ้น
-              final data = doc.data() as Map<String, dynamic>? ?? {};
-
-              final storeName = data['storeName'] ?? 'ไม่ระบุร้านค้า';
-              final description = data['description'] ?? 'ไม่มีรายละเอียด';
-              final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
-              final transactionDate = (data['transactionDate'] as Timestamp?)?.toDate();
-              final imageUrl = data['imageUrl'] as String?; // ดึง imageUrl มาด้วย
-
-              final formattedDate = transactionDate != null
-                  ? DateFormat('dd MMM yy', 'th').format(transactionDate)
-                  : 'N/A';
-
-              // เพิ่ม doc.id เข้าไปใน Map เพื่อส่งไปยัง ReceiptDetailPage
-              // **สำคัญมาก** เพื่อใช้เป็น Hero Tag ที่ไม่ซ้ำกัน
-              data['docId'] = doc.id;
-
-              // ใช้ Card ที่ออกแบบใหม่
-              return Card(
-                elevation: 2,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                clipBehavior: Clip.antiAlias, // ทำให้ InkWell อยู่ในขอบมน
-                child: InkWell(
-                  // เพิ่ม InkWell เพื่อให้มี animation ตอนกด
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ReceiptDetailPage(receiptData: data),
-                      ),
-                    );
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        // เพิ่ม Hero Widget ที่นี่สำหรับรูปภาพ (ถ้ามี)
-                        // Tag ต้องไม่ซ้ำกันสำหรับแต่ละรายการ
-                        // และต้องตรงกับ Tag ใน ReceiptDetailPage
-                        if (imageUrl != null && imageUrl.isNotEmpty)
-                          Hero(
-                            tag: 'receipt-image-${doc.id}', // ใช้ doc.id เพื่อให้ tag ไม่ซ้ำกัน
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(8.0), // ทำให้รูปภาพมีขอบมน
-                              child: Image.network(
-                                imageUrl,
-                                width: 60,
-                                height: 60,
-                                fit: BoxFit.cover,
-                                loadingBuilder: (context, child, loadingProgress) {
-                                  if (loadingProgress == null) return child;
-                                  return Container(
-                                    width: 60,
-                                    height: 60,
-                                    color: Colors.grey[200],
-                                    child: Center(child: CircularProgressIndicator(value: loadingProgress.expectedTotalBytes != null ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes! : null)),
-                                  );
-                                },
-                                errorBuilder: (context, error, stackTrace) => Container(
-                                  width: 60,
-                                  height: 60,
-                                  color: Colors.grey[200],
-                                  child: Icon(Icons.image_outlined, color: Colors.grey[400]),
-                                ),
-                              ),
-                            ),
-                          )
-                        else
-                          // Icon Placeholder หากไม่มีรูปภาพ
-                          CircleAvatar(
-                            backgroundColor: primaryColor.withOpacity(0.1),
-                            foregroundColor: primaryColor,
-                            child: const Icon(Icons.receipt_long),
-                          ),
-                        const SizedBox(width: 16),
-                        // จัดวางข้อความใหม่
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                storeName,
-                                style: GoogleFonts.prompt(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 17,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                description,
-                                style: GoogleFonts.prompt(
-                                  color: Colors.grey[600],
-                                  fontSize: 14,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  Icon(Icons.calendar_today_outlined, size: 12, color: Colors.grey),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    formattedDate,
-                                    style: GoogleFonts.prompt(color: Colors.grey, fontSize: 12),
-                                  ),
-                                ],
-                              )
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        // จัดวางราคา
-                        Text(
-                          '${NumberFormat("#,##0.00").format(amount)} ฿',
-                          style: GoogleFonts.prompt(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green[800],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
+      // ✨ 6. ใช้ Column เพื่อวาง SearchBar และ ListView
+      body: Column(
+        children: [
+          CategorySearchBar(
+            controller: _searchController,
+            onChanged: (value) {
+              // onChanged ของ TextField จะ trigger listener ที่เราตั้งไว้ใน initState
             },
+            onClear: _clearSearch,
+          ),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: _buildStream(), // ใช้ stream จากฟังก์ชันที่สร้างไว้
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator(color: primaryColor));
+                }
+
+                if (snapshot.hasError) {
+                  return Center(child: Text('เกิดข้อผิดพลาด: ${snapshot.error}', style: GoogleFonts.prompt()));
+                }
+
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  // แสดงผลตามสถานการณ์ (มีคำค้นหาหรือไม่)
+                  return _buildEmptyState();
+                }
+
+                final docs = snapshot.data!.docs;
+
+                return ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  itemCount: docs.length,
+                  itemBuilder: (context, index) {
+                    final doc = docs[index];
+                    final data = doc.data() as Map<String, dynamic>? ?? {};
+                    data['docId'] = doc.id;
+                    // ใช้ Widget เดิมในการแสดงผล Card
+                    return _buildReceiptCard(context, data, primaryColor);
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Widget สำหรับแสดงผลเมื่อไม่มีข้อมูล
+  Widget _buildEmptyState() {
+    if (_searchQuery.isNotEmpty) {
+      return Center(
+        child: Text(
+          'ไม่พบผลลัพธ์สำหรับ "$_searchQuery"',
+          style: GoogleFonts.prompt(fontSize: 16, color: Colors.grey[600]),
+        ),
+      );
+    } else {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.inbox_outlined, size: 80, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              'ยังไม่มีใบเสร็จในหมวดหมู่นี้',
+              style: GoogleFonts.prompt(fontSize: 18, color: Colors.grey[600]),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  // แยก Widget Card ออกมาเพื่อความสะอาด
+  Widget _buildReceiptCard(BuildContext context, Map<String, dynamic> data, Color primaryColor) {
+    final storeName = data['storeName'] ?? 'ไม่ระบุร้านค้า';
+    final description = data['description'] ?? 'ไม่มีรายละเอียด';
+    final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
+    final transactionDate = (data['transactionDate'] as Timestamp?)?.toDate();
+    final imageUrl = data['imageUrl'] as String?;
+    final docId = data['docId'] as String;
+
+    final formattedDate = transactionDate != null
+        ? DateFormat('dd MMM yy', 'th').format(transactionDate)
+        : 'N/A';
+
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => ReceiptDetailPage(receiptData: data)),
           );
         },
-      ),
-      // เพิ่มปุ่มสำหรับสร้างใบเสร็จใหม่
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: เพิ่มโค้ดสำหรับไปยังหน้าเพิ่มใบเสร็จ
-          print('Add new receipt');
-        },
-        backgroundColor: primaryColor,
-        child: const Icon(Icons.add, color: Colors.white),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              if (imageUrl != null && imageUrl.isNotEmpty)
+                Hero(
+                  tag: 'receipt-image-$docId',
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8.0),
+                    child: Image.network(
+                      imageUrl,
+                      width: 60, height: 60, fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(width: 60, height: 60, color: Colors.grey[200], child: Icon(Icons.image_outlined, color: Colors.grey[400])),
+                    ),
+                  ),
+                )
+              else
+                CircleAvatar(
+                  radius: 30,
+                  backgroundColor: primaryColor.withOpacity(0.1),
+                  foregroundColor: primaryColor,
+                  child: const Icon(Icons.receipt_long),
+                ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(storeName, style: GoogleFonts.prompt(fontWeight: FontWeight.w600, fontSize: 17), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 4),
+                    Text(description, style: GoogleFonts.prompt(color: Colors.grey[600], fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Text(
+                '${NumberFormat("#,##0.00").format(amount)} ฿',
+                style: GoogleFonts.prompt(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green[800]),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
