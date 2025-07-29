@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cool_alert/cool_alert.dart';
+import 'package:run_android/Screen/Pages/Category_manage/Widgets/all_receipt_page.dart';
 import 'package:run_android/Screen/Pages/Category_manage/Widgets/category_card.dart';
 import 'package:run_android/Screen/Pages/Category_manage/Widgets/receipt_list_page.dart';
 import 'package:run_android/Screen/Pages/Category_manage/Widgets/search_bar.dart';
 import 'package:run_android/Screen/Pages/Category_manage/Widgets/sort_options.dart';
 import 'package:run_android/Screen/Pages/Category_manage/Widgets/statistics_card.dart';
 import 'package:run_android/Screen/Pages/Category_manage/Widgets/add_category_dialog.dart';
+
 
 import 'package:run_android/models/category_model.dart';
 import 'package:run_android/services/categories_service.dart';
@@ -75,6 +77,16 @@ class _CategoryPageState extends State<CategoryPage> {
         }
       }
     }
+  }
+
+  // ฟังก์ชันสำหรับนำทางไปยัง AllUserReceiptsPage
+  void _navigateToAllUserReceipts() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AllReceiptsPage(), // ตรวจสอบว่า AllUserReceiptsPage ถูกสร้างไว้ถูกต้อง
+      ),
+    );
   }
 
   @override
@@ -146,6 +158,28 @@ class _CategoryPageState extends State<CategoryPage> {
                       SliverToBoxAdapter(
                         child: StatisticsCard(categories: allCategories),
                       ),
+                      // เพิ่มปุ่ม "ดูใบเสร็จทั้งหมด" ตรงนี้
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 10.0),
+                          child: ElevatedButton.icon(
+                            onPressed: _navigateToAllUserReceipts,
+                            icon: const Icon(Icons.receipt_long),
+                            label: Text(
+                              'ดูใบเสร็จทั้งหมด',
+                              style: GoogleFonts.prompt(fontWeight: FontWeight.bold),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(50), // ทำให้ปุ่มกว้างเต็ม
+                              backgroundColor: Colors.blue.shade600,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                       SliverToBoxAdapter(
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 10.0),
@@ -160,27 +194,27 @@ class _CategoryPageState extends State<CategoryPage> {
                         ),
                       ),
                       SliverList(
-  delegate: SliverChildBuilderDelegate(
-    (context, index) {
-      final category = filteredCategories[index];
-      return CategoryCard(
-        category: category,
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ReceiptList(
-                categoryId: category.id,
-                categoryName: category.name,
-              ),
-            ),
-          );
-        },
-      );
-    },
-    childCount: filteredCategories.length,
-  ),
-),
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final category = filteredCategories[index];
+                            return CategoryCard(
+                              category: category,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ReceiptList(
+                                      categoryId: category.id,
+                                      categoryName: category.name,
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                          childCount: filteredCategories.length,
+                        ),
+                      ),
                     ],
                   );
                 },

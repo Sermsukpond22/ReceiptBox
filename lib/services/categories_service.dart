@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/src/widgets/icon_data.dart';
 import 'package:run_android/models/category_model.dart';
 
 
@@ -17,7 +18,7 @@ class CategoryService {
   bool get isUserLoggedIn => currentUser != null;
 
   /// ✅ Creates a new custom category for the current user
-  Future<String> createCategory(String name) async {
+  Future<String> createCategory(String name, {IconData? icon}) async {
     try {
       final user = currentUser;
       if (user == null) throw Exception('กรุณาเข้าสู่ระบบก่อนใช้งาน');

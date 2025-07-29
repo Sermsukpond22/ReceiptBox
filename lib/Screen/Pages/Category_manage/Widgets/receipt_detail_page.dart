@@ -1,3 +1,4 @@
+import 'package:photo_view/photo_view.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -54,18 +55,59 @@ class ReceiptDetailPage extends StatelessWidget {
       }
     }
   }
-
+  void _showPhotoViewer(BuildContext context, String imageUrl, String heroTag) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Close',
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (context, anim1, anim2) {
+        return Scaffold(
+          backgroundColor: Colors.black.withOpacity(0.9),
+          body: Stack(
+            children: [
+              // ใช้ PhotoView เพื่อให้ซูมและเลื่อนได้
+              Hero(
+                tag: heroTag, // ใช้ Hero Tag เดียวกันเพื่อ animation ที่ลื่นไหล
+                child: PhotoView(
+                  imageProvider: NetworkImage(imageUrl),
+                  minScale: PhotoViewComputedScale.contained,
+                  maxScale: PhotoViewComputedScale.covered * 2.0,
+                  loadingBuilder: (context, event) => const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
+              ),
+              // ปุ่มปิด (X) ที่มุมขวาบน
+              Positioned(
+                top: 40.0,
+                right: 20.0,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
   // --- Build Method หลัก ---
   @override
   Widget build(BuildContext context) {
-    // ดึง docId ออกมาโดยตรงจาก receiptData
     final docId = receiptData['docId'] as String?;
     final transactionDate = (receiptData['transactionDate'] as Timestamp?)?.toDate();
     final formattedDate = transactionDate != null
-        ? DateFormat('d MMMM yyyy, เวลา HH:mm', 'th').format(transactionDate) // ปรับปรุงรูปแบบวันที่
+        ? DateFormat('d MMMM yyyy, เวลา HH:mm', 'th').format(transactionDate)
         : 'ไม่ระบุวันที่';
     final amount = (receiptData['amount'] as num?)?.toDouble() ?? 0.0;
     final imageUrl = receiptData['imageUrl'] as String?;
+    
+    // สร้าง Hero Tag ที่ไม่ซ้ำกันสำหรับรูปภาพ
+    final heroTag = 'receipt-image-${docId ?? UniqueKey().toString()}';
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
@@ -110,22 +152,19 @@ class ReceiptDetailPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ✨ ส่วนแสดงรูปภาพ (ถ้ามี)
             if (imageUrl != null && imageUrl.isNotEmpty) ...[
-              // *** จุดที่อาจเกี่ยวข้องกับปัญหา Hero Tag ของคุณ ***
-              // ถ้าคุณใช้ Hero widget ในหน้า List เพื่อแสดงรูปภาพนี้
-              // คุณควรจะใช้ Hero widget ที่นี่ด้วย โดยมี tag ที่ไม่ซ้ำกับ Hero widget ตัวอื่นๆ ในหน้าเดียวกัน
-              // และเป็น tag เดียวกันกับ Hero widget ที่ใช้ในหน้า List ของใบเสร็จนี้
-              // ตัวอย่าง: Hero(tag: 'receipt-image-${docId}', child: Image.network(...))
-              _buildHeaderImage(imageUrl),
+              // ✨ 3. ทำให้รูปภาพสามารถกดได้
+              GestureDetector(
+                onTap: () => _showPhotoViewer(context, imageUrl, heroTag),
+                child: Hero(
+                  tag: heroTag, // กำหนด Hero Tag ที่นี่
+                  child: _buildHeaderImage(imageUrl),
+                ),
+              ),
               const SizedBox(height: 20),
             ],
-
-            // ✨ ส่วนแสดงยอดเงินให้เด่นชัด
             _buildAmountCard(amount),
             const SizedBox(height: 20),
-
-            // ✨ Card ที่รวบรวมรายละเอียดทั้งหมด
             _buildDetailsCard(formattedDate),
           ],
         ),
@@ -136,7 +175,7 @@ class ReceiptDetailPage extends StatelessWidget {
   // --- Helper Widgets สำหรับสร้าง UI ส่วนต่างๆ ---
 
   /// Widget สำหรับแสดงรูปภาพ Header
-  Widget _buildHeaderImage(String imageUrl) {
+ Widget _buildHeaderImage(String imageUrl) {
     return Card(
       elevation: 4,
       shadowColor: Colors.black.withOpacity(0.2),

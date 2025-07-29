@@ -39,17 +39,7 @@ class _AdminScreenState extends State<AdminScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       // พื้นหลังของ Scaffold จะเป็นสี googleLightBlueBackground ที่กำหนดใน main.dart
-      appBar: AppBar(
-        title: Text(
-          'หน้าสำหรับผู้ดูแลระบบ',
-          style: GoogleFonts.prompt(fontWeight: FontWeight.w600, color: Colors.white), // ใช้ Prompt
-        ),
-        backgroundColor: adminRed, // AppBar ของ Admin จะเป็นสีแดงเฉพาะตัว
-        centerTitle: true,
-        actions: [
-          
-        ],
-      ),
+
       body: _widgetOptions.elementAt(_selectedIndex), // แสดง Widget ตามเมนูที่เลือก
       bottomNavigationBar: BottomNavigationBar(
         items: <BottomNavigationBarItem>[

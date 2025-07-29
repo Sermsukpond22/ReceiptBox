@@ -75,10 +75,8 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
               backgroundColor: Colors.grey[200], // Lighter background for avatar
               backgroundImage: _profileImageUrl != null
                   ? NetworkImage(_profileImageUrl!)
-                  : const AssetImage('assets/images/default_profile.png') as ImageProvider,
-              child: _profileImageUrl == null // Add an icon if no image is present
-                  ? Icon(Icons.person, size: 60, color: Colors.grey[600])
-                  : null,
+                  : const AssetImage('assets/images (2).jpg') as ImageProvider,
+              
             ),
             const SizedBox(height: 25), // Increased spacing
 

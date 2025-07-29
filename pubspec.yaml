@@ -33,6 +33,9 @@ dependencies:
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
+  photo_view: ^0.15.0
+  charts_flutter: ^0.12.0
+  fl_chart: ^0.68.0
   cupertino_icons: ^1.0.8
   google_generative_ai: ^0.4.7
   http: 1.4.0
@@ -43,7 +46,7 @@ dependencies:
   cloud_firestore: ^5.6.7
   cool_alert: ^2.0.0
   path: ^1.8.0
-  intl: ^0.18.1
+  intl: ^0.17.0
   google_fonts: ^6.1.0
   path_provider: ^2.0.15
   googleapis: ^13.1.0
@@ -76,6 +79,7 @@ flutter:
     - assets/logo_receipt.png
     - assets/receiptbox_ocr.json
     - assets/default_profile_image.png
+    - assets/images (2).jpg
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

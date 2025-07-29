@@ -1,39 +1,48 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart'; // สำคัญมากที่ต้อง import 'package:flutter/material.dart';
 
 class Category {
   final String id;
   final String name;
-  final String? userId; // null = default
   final Timestamp createdAt;
-  final Timestamp? updatedAt;
+  final bool isDefault;
+  final IconData? icon; // Field to store IconData
 
   Category({
     required this.id,
     required this.name,
-    required this.userId,
     required this.createdAt,
-    this.updatedAt,
+    this.isDefault = false,
+    this.icon, // Allow icon to be passed in constructor
   });
 
-  bool get isDefault => userId == null;
-
+  // Factory constructor for creating a Category from a Firestore DocumentSnapshot
   factory Category.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
     return Category(
       id: doc.id,
-      name: data['name'] as String,
-      userId: data['userId'] as String?,
-      createdAt: data['createdAt'] as Timestamp,
-      updatedAt: data['updatedAt'] as Timestamp?,
+      name: data['name'] ?? '',
+      createdAt: (data['createdAt'] as Timestamp?) ?? Timestamp.now(),
+      isDefault: data['userId'] == null, // Default categories have userId = null
+      icon: data['iconCodePoint'] != null // Convert iconCodePoint to IconData
+          ? IconData(
+              int.parse(data['iconCodePoint'].toString()), // Ensure it's parsed as int
+              fontFamily: 'MaterialIcons', // Specify the font family
+            )
+          : null,
     );
   }
 
-  Map<String, dynamic> toFirestore() {
+  // Convert Category object to a Map for Firestore
+  Map<String, dynamic> toMap() {
     return {
       'name': name,
-      'userId': userId,
       'createdAt': createdAt,
-      'updatedAt': updatedAt,
+      'userId': isDefault ? null : FirebaseAuth.instance.currentUser?.uid, // Handle userId for default vs user categories
+      'isDefault': isDefault,
+      'iconCodePoint': icon?.codePoint.toString(), // Store codePoint as String
+      'updatedAt': FieldValue.serverTimestamp(), // Add or update updatedAt
     };
   }
 }

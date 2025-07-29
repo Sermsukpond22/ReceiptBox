@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:run_android/models/category_model.dart';
+import 'package:run_android/models/category_model.dart'; // ตรวจสอบให้แน่ใจว่า import ถูกต้อง
 
 class CategoryCard extends StatelessWidget {
   final Category category;
-  final VoidCallback? onTap; // ✅ เพิ่มพารามิเตอร์ onTap
+  final VoidCallback? onTap;
 
   const CategoryCard({
     Key? key,
     required this.category,
-    this.onTap, // ✅ รับ onTap เข้ามา
+    this.onTap,
   }) : super(key: key);
 
   @override
@@ -34,7 +34,7 @@ class CategoryCard extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: onTap, // ✅ เรียก onTap ที่ส่งมาจากภายนอก
+          onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -49,7 +49,9 @@ class CategoryCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
-                    category.isDefault ? Icons.settings : Icons.label,
+                    // ✅ เปลี่ยนจาก Icons.settings / Icons.label
+                    // มาใช้ category.icon โดยมี fallback เป็น Icons.category
+                    category.icon ?? Icons.category, // ใช้ไอคอนจาก category model, ถ้าไม่มีให้ใช้ Icons.category เป็นค่าเริ่มต้น
                     size: 28,
                     color: category.isDefault
                         ? Colors.grey[600]
@@ -73,7 +75,8 @@ class CategoryCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'สร้างเมื่อ: ${thaiDateFormat.format(category.createdAt.toDate())}',
+                        // ตรวจสอบว่า createdAt ไม่เป็น null ก่อน format
+                        'สร้างเมื่อ: ${category.createdAt.toDate() != null ? thaiDateFormat.format(category.createdAt.toDate()) : 'N/A'}',
                         style: GoogleFonts.prompt(
                           fontSize: 13,
                           color: Colors.grey[600],

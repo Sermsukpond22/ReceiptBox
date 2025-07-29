@@ -1,4 +1,4 @@
-import 'dart:async'; // ✨ 1. Import สำหรับ Debounce
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,8 +6,29 @@ import 'package:intl/intl.dart';
 import 'package:run_android/Screen/Pages/Category_manage/Widgets/receipt_SearchBar.dart';
 import 'receipt_detail_page.dart';
 
+// ✨ 1. สร้าง enum เพื่อจัดการตัวเลือกการจัดเรียงให้ชัดเจน
+enum SortOption {
+  byDate,
+  byPrice,
+  byName,
+}
 
-// ✨ 3. แปลงเป็น StatefulWidget
+// Helper function สำหรับแสดงชื่อตัวเลือกการจัดเรียง
+extension SortOptionExtension on SortOption {
+  String get displayName {
+    switch (this) {
+      case SortOption.byDate:
+        return 'เรียงตามวันที่';
+      case SortOption.byPrice:
+        return 'เรียงตามราคา';
+      case SortOption.byName:
+        return 'เรียงตามชื่อร้าน';
+      default:
+        return '';
+    }
+  }
+}
+
 class ReceiptList extends StatefulWidget {
   final String categoryId;
   final String categoryName;
@@ -23,10 +44,12 @@ class ReceiptList extends StatefulWidget {
 }
 
 class _ReceiptListState extends State<ReceiptList> {
-  // ✨ 4. สร้าง State สำหรับจัดการการค้นหา
   final _searchController = TextEditingController();
   String _searchQuery = '';
   Timer? _debounce;
+
+  // ✨ 2. เพิ่ม State สำหรับเก็บตัวเลือกการจัดเรียงปัจจุบัน (ค่าเริ่มต้นคือวันที่)
+  SortOption _currentSortOption = SortOption.byDate;
 
   @override
   void initState() {
@@ -42,7 +65,6 @@ class _ReceiptListState extends State<ReceiptList> {
     super.dispose();
   }
 
-  // ฟังก์ชัน Debounce ป้องกันการ query ขณะพิมพ์
   void _onSearchChanged() {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () {
@@ -61,21 +83,32 @@ class _ReceiptListState extends State<ReceiptList> {
     });
   }
 
-  // ✨ 5. สร้าง Stream แบบไดนามิกตาม _searchQuery
   Stream<QuerySnapshot<Map<String, dynamic>>> _buildStream() {
     Query<Map<String, dynamic>> query = FirebaseFirestore.instance
         .collection('receipts')
         .where('categoryId', isEqualTo: widget.categoryId);
 
     if (_searchQuery.isNotEmpty) {
-      // ค้นหาจาก storeName ที่ขึ้นต้นด้วยคำค้นหา
+      // เมื่อมีการค้นหา จะเรียงตามชื่อร้านเสมอ
       query = query
           .where('storeName', isGreaterThanOrEqualTo: _searchQuery)
           .where('storeName', isLessThanOrEqualTo: '$_searchQuery\uf8ff')
-          .orderBy('storeName'); // **สำคัญ:** ต้อง orderBy field ที่ใช้ inequality
+          .orderBy('storeName');
     } else {
-      // ถ้าไม่มีคำค้นหา ให้เรียงตามวันที่สร้างเหมือนเดิม
-      query = query.orderBy('createdAt', descending: true);
+      // ✨ 4. ปรับ Logic การเรียงข้อมูลตาม _currentSortOption เมื่อไม่มีการค้นหา
+      switch (_currentSortOption) {
+        case SortOption.byPrice:
+          query = query.orderBy('amount', descending: true); // ราคาสูง -> ต่ำ
+          break;
+        case SortOption.byName:
+          query = query.orderBy('storeName', descending: false); // ก -> ฮ
+          break;
+        case SortOption.byDate:
+        default: // ค่าเริ่มต้น
+          // เรียงตามวันที่ทำรายการ (ใหม่ -> เก่า)
+          query = query.orderBy('transactionDate', descending: true);
+          break;
+      }
     }
 
     return query.snapshots();
@@ -96,32 +129,49 @@ class _ReceiptListState extends State<ReceiptList> {
           'ใบเสร็จ: ${widget.categoryName}',
           style: GoogleFonts.prompt(fontWeight: FontWeight.bold),
         ),
-        // ไม่ต้องมีปุ่มค้นหาที่ AppBar แล้ว
+        // ✨ 3. เพิ่มปุ่ม Filter สำหรับการจัดเรียง
+        actions: [
+          PopupMenuButton<SortOption>(
+            icon: const Icon(Icons.filter_list),
+            onSelected: (SortOption result) {
+              setState(() {
+                _currentSortOption = result; // อัปเดต State เมื่อผู้ใช้เลือก
+              });
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<SortOption>>[
+              for (var option in SortOption.values)
+                PopupMenuItem<SortOption>(
+                  value: option,
+                  child: Text(
+                    option.displayName,
+                    style: GoogleFonts.prompt(),
+                  ),
+                ),
+            ],
+          ),
+        ],
       ),
-      // ✨ 6. ใช้ Column เพื่อวาง SearchBar และ ListView
       body: Column(
         children: [
           CategorySearchBar(
             controller: _searchController,
-            onChanged: (value) {
-              // onChanged ของ TextField จะ trigger listener ที่เราตั้งไว้ใน initState
-            },
+            onChanged: (value) {},
             onClear: _clearSearch,
           ),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: _buildStream(), // ใช้ stream จากฟังก์ชันที่สร้างไว้
+              stream: _buildStream(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return Center(child: CircularProgressIndicator(color: primaryColor));
                 }
 
                 if (snapshot.hasError) {
-                  return Center(child: Text('เกิดข้อผิดพลาด: ${snapshot.error}', style: GoogleFonts.prompt()));
+                  // แสดงข้อความแนะนำให้สร้าง Index
+                  return _buildErrorState(snapshot.error.toString());
                 }
 
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  // แสดงผลตามสถานการณ์ (มีคำค้นหาหรือไม่)
                   return _buildEmptyState();
                 }
 
@@ -134,7 +184,6 @@ class _ReceiptListState extends State<ReceiptList> {
                     final doc = docs[index];
                     final data = doc.data() as Map<String, dynamic>? ?? {};
                     data['docId'] = doc.id;
-                    // ใช้ Widget เดิมในการแสดงผล Card
                     return _buildReceiptCard(context, data, primaryColor);
                   },
                 );
@@ -238,6 +287,34 @@ class _ReceiptListState extends State<ReceiptList> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+  // Widget สำหรับแสดงข้อผิดพลาด (โดยเฉพาะเรื่อง Index)
+  Widget _buildErrorState(String error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 60),
+            const SizedBox(height: 16),
+            Text('เกิดข้อผิดพลาด', style: GoogleFonts.prompt(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text(
+              'อาจเกิดจากคุณยังไม่ได้สร้าง Index ใน Firestore สำหรับการ Query นี้\nโปรดตรวจสอบ Log ใน Console เพื่อดู Link สำหรับสร้าง Index ที่ต้องการ',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.prompt(fontSize: 14, color: Colors.grey[700]),
+            ),
+             const SizedBox(height: 16),
+            Text(
+              'Error: $error', // แสดง error จริงๆ ด้วยเผื่อเป็นปัญหาอื่น
+              textAlign: TextAlign.center,
+              style: GoogleFonts.prompt(fontSize: 12, color: Colors.grey[500]),
+            ),
+          ],
         ),
       ),
     );
