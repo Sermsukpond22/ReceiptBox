@@ -22,10 +22,10 @@ class CategoryService {
 
       final docRef = await _firestore.collection('categories').add({
         'name': name.trim(),
-        'icon': icon ?? 'default', // ✅ เก็บชื่อ icon
+        'icon': icon ?? 'category', // เก็บชื่อ icon
         'userId': user.uid,
         'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': null,
+        'updatedAt': FieldValue.serverTimestamp(),
       });
       return docRef.id;
     } catch (e) {
@@ -73,7 +73,7 @@ class CategoryService {
             userSnap.docs.map((doc) => Category.fromFirestore(doc)).toList();
 
         yield [...defaultCategories, ...userCategories];
-        break; // yield one combined result only
+        break; // ✅ คงโครงสร้างเดิม
       }
     }
   }
@@ -121,7 +121,7 @@ class CategoryService {
       final doc =
           await _firestore.collection('categories').doc(categoryId).get();
       if (doc.exists) {
-        return Category.fromFirestore(doc);
+        return Category.fromFirestore(doc); // ✅ ใช้ factory ที่ถูกต้อง
       }
       return null;
     } catch (e) {
@@ -149,10 +149,10 @@ class CategoryService {
       if (query.docs.isEmpty) {
         await _firestore.collection('categories').add({
           'name': cat['name'],
-          'icon': cat['icon'], // ✅ บันทึกชื่อ icon
+          'icon': cat['icon'],
           'userId': null,
           'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': null,
+          'updatedAt': FieldValue.serverTimestamp(),
         });
       }
     }

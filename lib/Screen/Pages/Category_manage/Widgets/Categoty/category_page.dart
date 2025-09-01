@@ -1,6 +1,9 @@
+// lib/Screen/Pages/Category_manage/category_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cool_alert/cool_alert.dart';
+import 'package:run_android/Screen/Pages/Category_manage/Widgets/Categoty/edit_category_dialog.dart';
 import 'package:run_android/Screen/Pages/Category_manage/Widgets/Receipt/all_receipt_page.dart';
 import 'package:run_android/Screen/Pages/Category_manage/Widgets/Categoty/category_card.dart';
 import 'package:run_android/Screen/Pages/Category_manage/Widgets/Receipt/receipt_list_page.dart';
@@ -8,6 +11,7 @@ import 'package:run_android/Screen/Pages/Category_manage/Widgets/Categoty/search
 import 'package:run_android/Screen/Pages/Category_manage/Widgets/Categoty/sort_options.dart';
 import 'package:run_android/Screen/Pages/Category_manage/Widgets/Categoty/statistics_card.dart';
 import 'package:run_android/Screen/Pages/Category_manage/Widgets/Categoty/add_category_dialog.dart';
+
 
 import 'package:run_android/models/category_model.dart';
 import 'package:run_android/services/categories_service.dart';
@@ -23,7 +27,13 @@ class _CategoryPageState extends State<CategoryPage> {
   final CategoryService _categoryService = CategoryService();
   String _searchQuery = '';
   bool _isAscending = true;
-  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // สร้างหมวดหมู่พื้นฐาน 5 หมวดหมู่หลักถ้ายังไม่มี
+    _categoryService.createDefaultCategoriesIfNotExists();
+  }
 
   List<Category> _filterAndSortCategories(List<Category> categories) {
     List<Category> filteredList = categories;
@@ -43,60 +53,53 @@ class _CategoryPageState extends State<CategoryPage> {
   }
 
   Future<void> _showAddCategoryDialog() async {
-    final newCategoryData = await showDialog<Map<String, dynamic>>(
+    final result = await showDialog<Map<String, String>>(
       context: context,
-      barrierDismissible: false, // ป้องกันการปิด dialog โดยการแตะนอก dialog
       builder: (context) => const AddCategoryDialog(),
     );
 
-    if (newCategoryData != null) {
-      setState(() {
-        _isLoading = true;
-      });
-
+    if (result != null) {
       try {
-        // เรียกใช้ service เพื่อสร้างหมวดหมู่ใหม่
         await _categoryService.createCategory(
-          newCategoryData['name'] as String,
-          icon: newCategoryData['icon'] as String,
+          result['name']!,
+          icon: result['icon'],
         );
 
-        // แสดงการแจ้งเตือนความสำเร็จ
+        // แสดง CoolAlert แจ้งเตือนความสำเร็จ
         if (context.mounted) {
-          await CoolAlert.show(
+          CoolAlert.show(
             context: context,
             type: CoolAlertType.success,
-            title: 'สำเร็จ!',
-            text: 'เพิ่มหมวดหมู่ "${newCategoryData['name']}" สำเร็จแล้ว!',
+            text: 'เพิ่มหมวดหมู่ "${result['name']}" สำเร็จแล้ว!',
             confirmBtnText: 'ตกลง',
             backgroundColor: Colors.green.shade100,
-            confirmBtnColor: Colors.green,
             loopAnimation: false,
-            animType: CoolAlertAnimType.slideInUp,
           );
         }
 
-        // UI จะอัพเดทอัตโนมัติเนื่องจากใช้ StreamBuilder
       } catch (e) {
         if (context.mounted) {
-          await CoolAlert.show(
+          CoolAlert.show(
             context: context,
             type: CoolAlertType.error,
             title: 'เกิดข้อผิดพลาด',
-            text: 'ไม่สามารถเพิ่มหมวดหมู่ได้: ${e.toString()}',
+            text: e.toString(),
             confirmBtnText: 'ปิด',
-            confirmBtnColor: Colors.red,
-            animType: CoolAlertAnimType.slideInDown,
           );
-        }
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
         }
       }
     }
+  }
+
+  // ฟังก์ชันแสดง Dialog จัดการหมวดหมู่ (แก้ไข/ลบ)
+  Future<void> _showEditCategoryDialog(Category category) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => EditCategoryDialog(category: category),
+    );
+
+    // ไม่จำเป็นต้องทำ setState() เพราะ StreamBuilder จะรีเฟรชอัตโนมัติ
+    // หาก result เป็น true แสดงว่ามีการอัปเดตหรือลบสำเร็จ
   }
 
   // ฟังก์ชันสำหรับนำทางไปยัง AllUserReceiptsPage
@@ -121,6 +124,17 @@ class _CategoryPageState extends State<CategoryPage> {
         backgroundColor: Colors.white,
         elevation: 1,
         foregroundColor: Colors.black87,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              setState(() {
+                // รีเฟรชข้อมูล
+              });
+            },
+            tooltip: 'รีเฟรชข้อมูล',
+          ),
+        ],
       ),
       body: SafeArea(
         child: Column(
@@ -146,39 +160,20 @@ class _CategoryPageState extends State<CategoryPage> {
                 });
               },
             ),
-            
-            // แสดง Loading indicator หากกำลังเพิ่มหมวดหมู่
-            if (_isLoading) ...[
-              Container(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'กำลังเพิ่มหมวดหมู่...',
-                      style: GoogleFonts.prompt(
-                        color: Theme.of(context).primaryColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            
             Expanded(
               child: StreamBuilder<List<Category>>(
                 stream: _categoryService.getAllCategoriesForUser(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(
-                      child: CircularProgressIndicator(),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text('กำลังโหลดข้อมูล...'),
+                        ],
+                      ),
                     );
                   }
 
@@ -189,8 +184,8 @@ class _CategoryPageState extends State<CategoryPage> {
                         children: [
                           Icon(
                             Icons.error_outline,
-                            size: 60,
-                            color: Colors.red[300],
+                            size: 64,
+                            color: Colors.red.shade300,
                           ),
                           const SizedBox(height: 16),
                           Text(
@@ -198,16 +193,13 @@ class _CategoryPageState extends State<CategoryPage> {
                             style: GoogleFonts.prompt(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.red[600],
+                              color: Colors.red,
                             ),
                           ),
                           const SizedBox(height: 8),
                           Text(
                             '${snapshot.error}',
-                            style: GoogleFonts.prompt(
-                              color: Colors.red[500],
-                              fontSize: 14,
-                            ),
+                            style: GoogleFonts.prompt(color: Colors.red),
                             textAlign: TextAlign.center,
                           ),
                         ],
@@ -220,33 +212,26 @@ class _CategoryPageState extends State<CategoryPage> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(32),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[100],
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.category,
-                              size: 80,
-                              color: Colors.grey[400],
-                            ),
+                          Icon(
+                            Icons.category_outlined,
+                            size: 64,
+                            color: Colors.grey.shade300,
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 16),
                           Text(
                             'ยังไม่มีหมวดหมู่',
                             style: GoogleFonts.prompt(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey[600],
+                              fontSize: 18,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'เพิ่มหมวดหมู่แรกของคุณ',
+                            'เริ่มต้นโดยการเพิ่มหมวดหมู่ใหม่',
                             style: GoogleFonts.prompt(
-                              fontSize: 16,
-                              color: Colors.grey[500],
+                              fontSize: 14,
+                              color: Colors.grey.shade600,
                             ),
                           ),
                         ],
@@ -262,7 +247,8 @@ class _CategoryPageState extends State<CategoryPage> {
                       SliverToBoxAdapter(
                         child: StatisticsCard(categories: allCategories),
                       ),
-                      // เพิ่มปุ่ม "ดูใบเสร็จทั้งหมด" ตรงนี้
+                      
+                      // ปุ่ม "ดูใบเสร็จทั้งหมด"
                       SliverToBoxAdapter(
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 10.0),
@@ -280,51 +266,102 @@ class _CategoryPageState extends State<CategoryPage> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 10.0),
-                          child: Text(
-                            "รายการหมวดหมู่",
-                            style: GoogleFonts.prompt(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
+                              elevation: 2,
                             ),
                           ),
                         ),
                       ),
                       
-                      // แสดงรายการหมวดหมู่หรือสถานะว่าง
-                      filteredCategories.isEmpty && _searchQuery.isNotEmpty
-                          ? SliverFillRemaining(
-                              child: _buildEmptySearchState(),
-                            )
-                          : SliverList(
-                              delegate: SliverChildBuilderDelegate(
-                                (context, index) {
-                                  final category = filteredCategories[index];
-                                  return CategoryCard(
-                                    category: category,
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => ReceiptList(
-                                            categoryId: category.id,
-                                            categoryName: category.name,
-                                          ),
-                                        ),
-                                      );
-                                    },
+                      // หัวข้อรายการหมวดหมู่
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 10.0),
+                          child: Row(
+                            children: [
+                              Text(
+                                "รายการหมวดหมู่",
+                                style: GoogleFonts.prompt(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              const Spacer(),
+                              Text(
+                                '${filteredCategories.length} รายการ',
+                                style: GoogleFonts.prompt(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      
+                      // รายการหมวดหมู่
+                      if (filteredCategories.isEmpty)
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32.0),
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.search_off,
+                                  size: 48,
+                                  color: Colors.grey.shade300,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'ไม่พบหมวดหมู่ที่ค้นหา',
+                                  style: GoogleFonts.prompt(
+                                    fontSize: 16,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                                Text(
+                                  'ลองค้นหาด้วยคำอื่น',
+                                  style: GoogleFonts.prompt(
+                                    fontSize: 14,
+                                    color: Colors.grey.shade500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final category = filteredCategories[index];
+                              return CategoryCard(
+                                category: category,
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ReceiptList(
+                                        categoryId: category.id,
+                                        categoryName: category.name,
+                                      ),
+                                    ),
                                   );
                                 },
-                                childCount: filteredCategories.length,
-                              ),
-                            ),
+                                onLongPress: () {
+                                  // เมื่อกดค้างให้แสดง Dialog แก้ไข/ลบ
+                                  _showEditCategoryDialog(category);
+                                },
+                              );
+                            },
+                            childCount: filteredCategories.length,
+                          ),
+                        ),
+                      
+                      // เพิ่มพื้นที่ว่างด้านล่างเพื่อไม่ให้ FloatingActionButton บัง
+                      const SliverToBoxAdapter(
+                        child: SizedBox(height: 80),
+                      ),
                     ],
                   );
                 },
@@ -334,61 +371,15 @@ class _CategoryPageState extends State<CategoryPage> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _isLoading ? null : _showAddCategoryDialog,
-        icon: _isLoading
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
-            : const Icon(Icons.add),
+        onPressed: _showAddCategoryDialog,
+        icon: const Icon(Icons.add),
         label: Text(
-          _isLoading ? 'กำลังเพิ่ม...' : 'เพิ่มหมวดหมู่',
-          style: GoogleFonts.prompt(fontWeight: FontWeight.bold),
+          'เพิ่มหมวดหมู่',
+          style: GoogleFonts.prompt(fontWeight: FontWeight.w600),
         ),
-        backgroundColor: _isLoading 
-            ? Colors.grey[400] 
-            : Theme.of(context).primaryColor,
+        backgroundColor: Colors.blue.shade600,
         foregroundColor: Colors.white,
-      ),
-    );
-  }
-
-  Widget _buildEmptySearchState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.search_off, size: 60, color: Colors.grey[400]),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'ไม่พบหมวดหมู่ที่ค้นหา',
-            style: GoogleFonts.prompt(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[600],
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'ลองใช้คำค้นหาอื่น หรือเพิ่มหมวดหมู่ใหม่',
-            style: GoogleFonts.prompt(
-              fontSize: 16,
-              color: Colors.grey[500],
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+        elevation: 4,
       ),
     );
   }
