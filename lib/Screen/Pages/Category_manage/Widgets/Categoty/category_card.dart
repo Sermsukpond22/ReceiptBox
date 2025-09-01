@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:run_android/models/category_model.dart'; // ตรวจสอบให้แน่ใจว่า import ถูกต้อง
+import 'package:run_android/Screen/Pages/Category_manage/Widgets/Categoty/edit_category_dialog.dart';
+import 'package:run_android/models/category_model.dart';
+
 
 class CategoryCard extends StatelessWidget {
   final Category category;
@@ -35,6 +37,8 @@ class CategoryCard extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: onTap,
+          // เพิ่ม onLongPress สำหรับการแสดงเมนูแก้ไข/ลบ
+          onLongPress: category.isDefault ? null : () => _showCategoryOptions(context),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -49,9 +53,7 @@ class CategoryCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
-                    // ✅ เปลี่ยนจาก Icons.settings / Icons.label
-                    // มาใช้ category.icon โดยมี fallback เป็น Icons.category
-                    category.icon ?? Icons.category, // ใช้ไอคอนจาก category model, ถ้าไม่มีให้ใช้ Icons.category เป็นค่าเริ่มต้น
+                    category.icon ?? Icons.category,
                     size: 28,
                     color: category.isDefault
                         ? Colors.grey[600]
@@ -75,7 +77,6 @@ class CategoryCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        // ตรวจสอบว่า createdAt ไม่เป็น null ก่อน format
                         'สร้างเมื่อ: ${category.createdAt.toDate() != null ? thaiDateFormat.format(category.createdAt.toDate()) : 'N/A'}',
                         style: GoogleFonts.prompt(
                           fontSize: 13,
@@ -92,6 +93,57 @@ class CategoryCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  // เมธอดสำหรับแสดง bottom sheet เพื่อให้ผู้ใช้เลือกการกระทำ
+  void _showCategoryOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext bc) {
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              // ปุ่มแก้ไข
+              ListTile(
+                leading: Icon(Icons.edit, color: Colors.blue[600]),
+                title: Text(
+                  'แก้ไขหมวดหมู่',
+                  style: GoogleFonts.prompt(fontSize: 16),
+                ),
+                onTap: () {
+                  Navigator.of(context).pop(); // ปิด bottom sheet
+                  // 🔥 เรียกใช้ dialog แก้ไข/ลบ
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext dialogContext) {
+                      return CategoryManagementDialog(category: category);
+                    },
+                  );
+                },
+              ),
+              // ปุ่มลบ
+              ListTile(
+                leading: Icon(Icons.delete_forever, color: Colors.red[600]),
+                title: Text(
+                  'ลบหมวดหมู่',
+                  style: GoogleFonts.prompt(fontSize: 16),
+                ),
+                onTap: () {
+                  Navigator.of(context).pop(); // ปิด bottom sheet
+                  // 🔥 เรียกใช้ dialog แก้ไข/ลบ
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext dialogContext) {
+                      return CategoryManagementDialog(category: category);
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

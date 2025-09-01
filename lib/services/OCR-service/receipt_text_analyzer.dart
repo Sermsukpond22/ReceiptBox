@@ -1,5 +1,6 @@
-// services/receipt_text_analyzer.dart
+// services/receipt_text_analyzer.dart (Enhanced Version)
 import 'package:intl/intl.dart';
+import 'receipt_category_classifier.dart';
 
 class ReceiptTextAnalyzer {
   // รูปแบบวันที่ที่เป็นไปได้
@@ -21,13 +22,13 @@ class ReceiptTextAnalyzer {
   // คำสำคัญสำหรับจำนวนเงิน
   static final List<String> _amountKeywords = [
     'total', 'รวม', 'ยอดรวม', 'sum', 'amount', 'จำนวน', 'เป็นเงิน',
-    'grand total', 'subtotal', 'net', 'รวมทั้งสิ้น', 'ทั้งหมด'
+    'grand total', 'subtotal', 'net', 'รวมทั้งสิ้น', 'ทั้งหมด', 'ชำระ'
   ];
 
-  // คำสำคัญสำหรับชื่อร้าน
+  // คำสำคัญสำหรับชื่อร้าน (อัปเดตใหม่)
   static final List<String> _storeKeywords = [
     'company', 'co.', 'ltd', 'limited', 'corp', 'inc', 'shop', 'store',
-    'ร้าน', 'บริษัท', 'จำกัด', 'ห้างหุ้นส่วน', 'มหาชน'
+    'ร้าน', 'บริษัท', 'จำกัด', 'ห้างหุ้นส่วน', 'มหาชน', 'สาขา', 'branch'
   ];
 
   // คำสำคัญสำหรับวันที่
@@ -35,7 +36,7 @@ class ReceiptTextAnalyzer {
     'date', 'วันที่', 'เมื่อ', 'time', 'เวลา', 'transaction', 'receipt'
   ];
 
-  /// ดึงชื่อร้านค้าจากข้อความ
+  /// ดึงชื่อร้านค้าจากข้อความ (ปรับปรุงใหม่)
   String extractStoreName(List<String> lines) {
     if (lines.isEmpty) return '';
 
@@ -43,28 +44,36 @@ class ReceiptTextAnalyzer {
     for (int i = 0; i < Math.min(5, lines.length); i++) {
       final line = lines[i];
       
+      // ข้ามบรรทัดที่เป็นเลขหรือสัญลักษณ์เท่านั้น
+      if (_isNumericOnly(line) || line.length < 3) continue;
+      
       // ตรวจสอบว่ามีคำสำคัญของร้านค้าหรือไม่
       if (_containsStoreKeywords(line)) {
         return _cleanStoreName(line);
       }
       
       // หากเป็นบรรทัดแรกและมีความยาวเหมาะสม
-      if (i == 0 && line.length > 3 && line.length < 50) {
-        return _cleanStoreName(line);
+      if (i <= 1 && line.length > 3 && line.length < 50) {
+        // ตรวจสอบว่าไม่ใช่วันที่หรือจำนวนเงิน
+        if (!_isDate(line) && !_isAmount(line)) {
+          return _cleanStoreName(line);
+        }
       }
     }
 
-    // หากไม่พบ ให้ใช้บรรทัดแรกที่ไม่ใช่ตัวเลขล้วน
+    // หากไม่พบ ให้ใช้บรรทัดแรกที่ดูเหมือนชื่อร้าน
     for (final line in lines.take(3)) {
-      if (!_isNumericOnly(line) && line.length > 3) {
-        return _cleanStoreName(line);
+      if (!_isNumericOnly(line) && line.length > 3 && line.length < 60) {
+        if (!_isDate(line) && !_isAmount(line)) {
+          return _cleanStoreName(line);
+        }
       }
     }
 
     return lines.isNotEmpty ? _cleanStoreName(lines[0]) : '';
   }
 
-  /// ดึงจำนวนเงินจากข้อความ
+  /// ดึงจำนวนเงินจากข้อความ (ปรับปรุงใหม่)
   double? extractAmount(List<String> lines) {
     final amounts = <double>[];
 
@@ -83,6 +92,8 @@ class ReceiptTextAnalyzer {
         RegExp(r'฿\s*[\d,]+\.?\d*'),
         RegExp(r'THB\s*[\d,]+\.?\d*'),
         RegExp(r'[\d,]+\.\d{2}$'),
+        RegExp(r'total\s*:?\s*[\d,]+\.?\d*', caseSensitive: false),
+        RegExp(r'รวม\s*:?\s*[\d,]+\.?\d*'),
       ];
 
       for (final pattern in patterns) {
@@ -105,7 +116,7 @@ class ReceiptTextAnalyzer {
     return null;
   }
 
-  /// ดึงวันที่จากข้อความ
+  /// ดึงวันที่จากข้อความ (เหมือนเดิม)
   DateTime? extractDate(List<String> lines) {
     for (final line in lines) {
       // ตรวจสอบบรรทัดที่มีคำสำคัญเกี่ยวกับวันที่
@@ -122,7 +133,7 @@ class ReceiptTextAnalyzer {
     return null;
   }
 
-  /// ดึงคำอธิบายจากข้อความ
+  /// ดึงคำอธิบายจากข้อความ (ปรับปรุงใหม่)
   String extractDescription(List<String> lines) {
     final descriptions = <String>[];
 
@@ -132,32 +143,192 @@ class ReceiptTextAnalyzer {
         continue;
       }
 
-      // เพิ่มบรรทัดที่ดูเหมือนรายการสินค้า
+      // เพิ่มบรรทัดที่ดูเหมือนรายการสินค้าหรือบริการ
       if (_looksLikeItem(line)) {
         descriptions.add(line);
       }
     }
 
-    return descriptions.take(3).join(', '); // เอาแค่ 3 รายการแรก
+    return descriptions.take(5).join(', '); // เอาแค่ 5 รายการแรก
   }
 
-  /// คำนวณความมั่นใจในการสแกน
+  /// คำนวณความมั่นใจในการสแกน (ปรับปรุงใหม่)
   double calculateConfidence(List<String> lines) {
     double confidence = 0.0;
     
     // มีข้อความ
-    if (lines.isNotEmpty) confidence += 0.2;
+    if (lines.isNotEmpty) confidence += 0.1;
     
     // มีชื่อร้าน
-    if (extractStoreName(lines).isNotEmpty) confidence += 0.3;
+    if (extractStoreName(lines).isNotEmpty) confidence += 0.25;
     
     // มีจำนวนเงิน
-    if (extractAmount(lines) != null) confidence += 0.3;
+    if (extractAmount(lines) != null) confidence += 0.35;
     
     // มีวันที่
-    if (extractDate(lines) != null) confidence += 0.2;
+    if (extractDate(lines) != null) confidence += 0.15;
+    
+    // สามารถจำแนกประเภทได้
+    final category = ReceiptCategoryClassifier.classifyReceipt(lines.join('\n'));
+    if (category != null) confidence += 0.15;
 
-    return confidence;
+    return Math.min(confidence, 1.0);
+  }
+
+  /// วิเคราะห์ข้อมูลแบบละเอียดพร้อมหมวดหมู่
+  Map<String, dynamic> analyzeReceiptWithCategory(List<String> lines) {
+    final fullText = lines.join('\n');
+    final category = ReceiptCategoryClassifier.classifyReceipt(fullText);
+    
+    final result = <String, dynamic>{
+      'storeName': extractStoreName(lines),
+      'amount': extractAmount(lines),
+      'date': extractDate(lines),
+      'description': extractDescription(lines),
+      'rawText': fullText,
+      'confidence': calculateConfidence(lines),
+      'category': category?.id,
+      'categoryName': category?.displayName,
+    };
+
+    // เพิ่มข้อมูลเฉพาะประเภท
+    if (category != null) {
+      final categoryData = ReceiptCategoryClassifier.extractCategorySpecificData(
+        category, 
+        lines, 
+        fullText
+      );
+      result['categorySpecificData'] = categoryData;
+      
+      // ปรับปรุงคำอธิบายตามประเภท
+      result['description'] = _generateCategorySpecificDescription(category, categoryData);
+    }
+
+    return result;
+  }
+
+  /// สร้างคำอธิบายเฉพาะตามประเภทใบเสร็จ
+  String _generateCategorySpecificDescription(ReceiptCategory category, Map<String, dynamic> data) {
+    switch (category) {
+      case ReceiptCategory.water:
+        return _generateWaterBillDescription(data);
+      case ReceiptCategory.electricity:
+        return _generateElectricityBillDescription(data);
+      case ReceiptCategory.fuel:
+        return _generateFuelReceiptDescription(data);
+      case ReceiptCategory.supermarket:
+        return _generateSupermarketDescription(data);
+      case ReceiptCategory.convenience:
+        return _generateConvenienceStoreDescription(data);
+    }
+  }
+
+  String _generateWaterBillDescription(Map<String, dynamic> data) {
+    final parts = <String>[];
+    
+    if (data['unitsUsed'] != null) {
+      parts.add('ใช้น้ำ ${data['unitsUsed']} หน่วย');
+    }
+    
+    if (data['previousReading'] != null && data['currentReading'] != null) {
+      parts.add('เลขมาตร ${data['previousReading']} - ${data['currentReading']}');
+    }
+    
+    if (data['customerNumber'] != null) {
+      parts.add('เลขที่ผู้ใช้ ${data['customerNumber']}');
+    }
+    
+    return parts.join(', ');
+  }
+
+  String _generateElectricityBillDescription(Map<String, dynamic> data) {
+    final parts = <String>[];
+    
+    if (data['kwhUsed'] != null) {
+      parts.add('ใช้ไฟ ${data['kwhUsed']} kWh');
+    }
+    
+    if (data['previousReading'] != null && data['currentReading'] != null) {
+      parts.add('เลขมาตร ${data['previousReading']} - ${data['currentReading']}');
+    }
+    
+    if (data['customerNumber'] != null) {
+      parts.add('เลขที่ผู้ใช้ ${data['customerNumber']}');
+    }
+    
+    return parts.join(', ');
+  }
+
+  String _generateFuelReceiptDescription(Map<String, dynamic> data) {
+    final parts = <String>[];
+    
+    if (data['fuelType'] != null) {
+      parts.add(data['fuelType'].toString());
+    }
+    
+    if (data['liters'] != null) {
+      parts.add('${data['liters']} ลิตร');
+    }
+    
+    if (data['pricePerLiter'] != null) {
+      parts.add('${data['pricePerLiter']} บาท/ลิตร');
+    }
+    
+    if (data['pumpNumber'] != null) {
+      parts.add('หัวจ่าย ${data['pumpNumber']}');
+    }
+    
+    return parts.join(', ');
+  }
+
+  String _generateSupermarketDescription(Map<String, dynamic> data) {
+    final parts = <String>[];
+    
+    if (data['items'] != null) {
+      final items = data['items'] as List;
+      parts.add('${items.length} รายการ');
+      
+      // แสดงรายการแรกๆ
+      final itemNames = items.take(3).map((item) => item['name']).toList();
+      if (itemNames.isNotEmpty) {
+        parts.add(itemNames.join(', '));
+      }
+    }
+    
+    if (data['memberNumber'] != null) {
+      parts.add('สมาชิก ${data['memberNumber']}');
+    }
+    
+    if (data['totalDiscount'] != null) {
+      parts.add('ส่วนลด ${data['totalDiscount']} บาท');
+    }
+    
+    return parts.join(', ');
+  }
+
+  String _generateConvenienceStoreDescription(Map<String, dynamic> data) {
+    final parts = <String>[];
+    
+    if (data['items'] != null) {
+      final items = data['items'] as List;
+      parts.add('${items.length} รายการ');
+      
+      // แสดงรายการแรกๆ
+      final itemNames = items.take(2).map((item) => item['name']).toList();
+      if (itemNames.isNotEmpty) {
+        parts.add(itemNames.join(', '));
+      }
+    }
+    
+    if (data['memberNumber'] != null) {
+      parts.add('สมาชิก ${data['memberNumber']}');
+    }
+    
+    if (data['pointsEarned'] != null) {
+      parts.add('ได้แต้ม ${data['pointsEarned']}');
+    }
+    
+    return parts.join(', ');
   }
 
   // === Helper Methods ===
@@ -233,7 +404,8 @@ class ReceiptTextAnalyzer {
 
   bool _isAmount(String line) {
     return _extractNumberFromLine(line) != null && 
-           (line.contains('บาท') || line.contains('฿') || line.contains('THB'));
+           (line.contains('บาท') || line.contains('฿') || line.contains('THB') || 
+            _containsAmountKeywords(line));
   }
 
   bool _looksLikeItem(String line) {

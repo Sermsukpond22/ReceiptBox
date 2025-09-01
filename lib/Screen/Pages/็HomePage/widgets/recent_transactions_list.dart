@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:run_android/Screen/Pages/Category_manage/Widgets/receipt_detail_page.dart';
-import 'package:run_android/Screen/Pages/Category_manage/Widgets/all_receipt_page.dart'; // ✅ Import AllReceiptsPage
+import 'package:run_android/Screen/Pages/Category_manage/Widgets/Receipt/receipt_detail_page.dart';
+import 'package:run_android/Screen/Pages/Category_manage/Widgets/Receipt/all_receipt_page.dart'; // ✅ Import AllReceiptsPage
 
 class RecentTransactionsList extends StatelessWidget {
   final List<QueryDocumentSnapshot> transactions;

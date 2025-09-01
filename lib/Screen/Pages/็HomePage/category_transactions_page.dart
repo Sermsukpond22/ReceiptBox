@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:run_android/Screen/Pages/Category_manage/Widgets/receipt_list_page.dart';
+import 'package:run_android/Screen/Pages/Category_manage/Widgets/Receipt/receipt_list_page.dart';
 
 
 

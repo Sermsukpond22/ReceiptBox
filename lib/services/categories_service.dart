@@ -1,9 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/src/widgets/icon_data.dart';
 import 'package:run_android/models/category_model.dart';
-
-
 
 /// Service for managing categories
 class CategoryService {
@@ -18,13 +15,14 @@ class CategoryService {
   bool get isUserLoggedIn => currentUser != null;
 
   /// ✅ Creates a new custom category for the current user
-  Future<String> createCategory(String name, {IconData? icon}) async {
+  Future<String> createCategory(String name, {String? icon}) async {
     try {
       final user = currentUser;
       if (user == null) throw Exception('กรุณาเข้าสู่ระบบก่อนใช้งาน');
 
       final docRef = await _firestore.collection('categories').add({
         'name': name.trim(),
+        'icon': icon ?? 'default', // ✅ เก็บชื่อ icon
         'userId': user.uid,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': null,
@@ -67,10 +65,12 @@ class CategoryService {
         .snapshots();
 
     await for (final defaultSnap in defaultQuery) {
-      final defaultCategories = defaultSnap.docs.map((doc) => Category.fromFirestore(doc)).toList();
+      final defaultCategories =
+          defaultSnap.docs.map((doc) => Category.fromFirestore(doc)).toList();
 
       await for (final userSnap in userQuery) {
-        final userCategories = userSnap.docs.map((doc) => Category.fromFirestore(doc)).toList();
+        final userCategories =
+            userSnap.docs.map((doc) => Category.fromFirestore(doc)).toList();
 
         yield [...defaultCategories, ...userCategories];
         break; // yield one combined result only
@@ -79,7 +79,8 @@ class CategoryService {
   }
 
   /// ✅ Updates a custom category (not allowed for default)
-  Future<void> updateCategory(String categoryId, String newName) async {
+  Future<void> updateCategory(String categoryId, String newName,
+      {String? newIcon}) async {
     final user = currentUser;
     if (user == null) throw Exception('กรุณาเข้าสู่ระบบก่อนใช้งาน');
 
@@ -93,6 +94,7 @@ class CategoryService {
 
     await _firestore.collection('categories').doc(categoryId).update({
       'name': newName.trim(),
+      if (newIcon != null) 'icon': newIcon,
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }
@@ -129,24 +131,25 @@ class CategoryService {
 
   /// ✅ Batch create default categories (run once for system)
   Future<void> createDefaultCategoriesIfNotExists() async {
-    final defaultNames = [
-      'ค่าน้ำ',
-      'ค่าไฟ',
-      'ค่าน้ำมัน',
-      'ใบเสร็จร้านสะดวกซื้อ',
-      'ใบเสร็จซุปเปอร์มาเก็ต'
+    final defaultCategories = [
+      {'name': 'ค่าน้ำ', 'icon': 'water_drop'},
+      {'name': 'ค่าไฟ', 'icon': 'flash_on'},
+      {'name': 'ค่าน้ำมัน', 'icon': 'local_gas_station'},
+      {'name': 'ร้านสะดวกซื้อ', 'icon': 'store'},
+      {'name': 'ซุปเปอร์มาร์เก็ต', 'icon': 'shopping_cart'},
     ];
 
-    for (final name in defaultNames) {
+    for (final cat in defaultCategories) {
       final query = await _firestore
           .collection('categories')
-          .where('name', isEqualTo: name)
+          .where('name', isEqualTo: cat['name'])
           .where('userId', isNull: true)
           .get();
 
       if (query.docs.isEmpty) {
         await _firestore.collection('categories').add({
-          'name': name,
+          'name': cat['name'],
+          'icon': cat['icon'], // ✅ บันทึกชื่อ icon
           'userId': null,
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': null,

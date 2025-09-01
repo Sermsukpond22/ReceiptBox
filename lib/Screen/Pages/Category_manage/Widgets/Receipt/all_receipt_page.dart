@@ -4,8 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // 
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:run_android/Screen/Pages/Category_manage/Widgets/receipt_SearchBar.dart';
-import 'package:run_android/Screen/Pages/Category_manage/Widgets/receipt_detail_page.dart';
+import 'package:run_android/Screen/Pages/Category_manage/Widgets/Receipt/receipt_SearchBar.dart';
+import 'package:run_android/Screen/Pages/Category_manage/Widgets/Receipt/receipt_detail_page.dart';
 
 
 
