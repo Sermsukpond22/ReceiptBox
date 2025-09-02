@@ -35,7 +35,7 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   photo_view: ^0.15.0
   charts_flutter: ^0.12.0
-  fl_chart: ^0.68.0
+  fl_chart: 0.68.0
   cupertino_icons: ^1.0.8
   google_generative_ai: ^0.4.7
   http: 1.4.0
@@ -51,6 +51,12 @@ dependencies:
   path_provider: ^2.0.15
   googleapis: ^13.1.0
   googleapis_auth: ^1.6.0
+
+  
+  share_plus: ^7.2.1        # สำหรับแชร์ไฟล์และข้อความ
+  pdf: ^3.10.7              # สำหรับสร้าง PDF
+  printing: ^5.11.1         # สำหรับจัดการ PDF และการพิมพ์
+  qr_flutter: ^4.1.0       # สำหรับสร้าง QR Code
   
 
 dev_dependencies:
