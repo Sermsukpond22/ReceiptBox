@@ -1,12 +1,18 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:run_android/Screen/Pages/Category_manage/Widgets/Receipt/all_receipt_page.dart';
 import 'package:run_android/Screen/Pages/Category_manage/Widgets/Receipt/receipt_detail_page.dart';
-import 'package:run_android/Screen/Pages/Category_manage/Widgets/Receipt/all_receipt_page.dart'; // ✅ Import AllReceiptsPage
+
+
+// ✅ 1. Import the Category model
+import 'package:run_android/models/category_model.dart';
 
 class RecentTransactionsList extends StatelessWidget {
   final List<QueryDocumentSnapshot> transactions;
-  final List<Map<String, dynamic>> categories;
+  // ✅ 2. Change the type to List<Category>
+  final List<Category> categories;
 
   const RecentTransactionsList({
     super.key,
@@ -20,24 +26,12 @@ class RecentTransactionsList extends StatelessWidget {
   }
 
   String _formatDate(Timestamp timestamp) {
-    final format = DateFormat('d MMM yy', 'th_TH');
+    // Switched to a more common date format
+    final format = DateFormat('d MMM yyyy', 'th_TH');
     return format.format(timestamp.toDate());
   }
 
-  // This function should ideally be in a utility or CategoryModel
-  // to properly map iconCodePoint to IconData.
-  // For simplicity, I'm keeping it here as per the original code structure.
-  IconData _getIconData(String? iconCodePointString) {
-    if (iconCodePointString == null) return Icons.receipt; // Default icon
-
-    try {
-      final int codePoint = int.parse(iconCodePointString);
-      return IconData(codePoint, fontFamily: 'MaterialIcons');
-    } catch (e) {
-      // Fallback if parsing fails
-      return Icons.receipt;
-    }
-  }
+  // ❌ 3. Remove the old _getIconData function entirely
 
   @override
   Widget build(BuildContext context) {
@@ -48,10 +42,9 @@ class RecentTransactionsList extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('รายการล่าสุด', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text('รายการล่าสุด', style: GoogleFonts.prompt(fontSize: 18, fontWeight: FontWeight.bold)),
               TextButton(
                 onPressed: () {
-                  // ✅ เชื่อมปุ่ม "ดูทั้งหมด" ไปยัง AllReceiptsPage
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -59,33 +52,39 @@ class RecentTransactionsList extends StatelessWidget {
                     ),
                   );
                 },
-                child: const Text('ดูทั้งหมด'),
+                child: Text('ดูทั้งหมด', style: GoogleFonts.prompt()),
               ),
             ],
           ),
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: transactions.length > 5 ? 5 : transactions.length, // Show up to 5 recent transactions
+            // Show up to 5 recent transactions
+            itemCount: transactions.length > 5 ? 5 : transactions.length,
             itemBuilder: (context, index) {
               final doc = transactions[index];
               final data = doc.data() as Map<String, dynamic>;
-
-              data['docId'] = doc.id; // Add docId to the map for detail page
+              data['docId'] = doc.id;
 
               final storeName = data['storeName'] ?? 'ไม่มีชื่อร้าน';
               final amount = (data['amount'] as num).toDouble();
               final date = data['transactionDate'] as Timestamp;
-              final categoryName = data['category'] as String? ?? 'default';
+              // Ensure you save 'categoryName' in your transaction documents
+              final categoryName = data['categoryName'] as String? ?? 'ไม่ระบุหมวดหมู่';
 
-              // Find the category to get its iconCodePoint
-              final categoryMatch = categories.firstWhere(
-                (cat) => cat['name'] == categoryName,
-                orElse: () => {'iconCodePoint': Icons.receipt.codePoint.toString()}, // Fallback for iconCodePoint
-              );
-              
-              // Use the iconCodePoint from the matched category
-              final IconData icon = _getIconData(categoryMatch['iconCodePoint']);
+              // ✅ 4. Find the matching Category object
+              Category? categoryMatch;
+              try {
+                 categoryMatch = categories.firstWhere(
+                   (cat) => cat.name == categoryName,
+                 );
+              } catch (e) {
+                // If no category is found, categoryMatch will remain null
+                categoryMatch = null;
+              }
+
+              // Use the icon from the matched category, or a default one
+              final IconData icon = categoryMatch?.icon ?? Icons.category;
 
               return Card(
                 elevation: 0,
@@ -96,14 +95,14 @@ class RecentTransactionsList extends StatelessWidget {
                 child: ListTile(
                   leading: CircleAvatar(
                     backgroundColor: amount < 0 ? Colors.red[50] : Colors.green[50],
-                    child: Icon(icon, color: amount < 0 ? Colors.red : Colors.green),
+                    child: Icon(icon, color: amount < 0 ? Colors.red.shade400 : Colors.green.shade600),
                   ),
-                  title: Text(storeName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text(_formatDate(date)),
+                  title: Text(storeName, style: GoogleFonts.prompt(fontWeight: FontWeight.bold)),
+                  subtitle: Text(_formatDate(date), style: GoogleFonts.prompt()),
                   trailing: Text(
                     _formatCurrency(amount),
-                    style: TextStyle(
-                      color: amount < 0 ? Colors.red : Colors.green,
+                    style: GoogleFonts.prompt(
+                      color: amount < 0 ? Colors.red.shade800 : Colors.green.shade800,
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                     ),
@@ -113,7 +112,7 @@ class RecentTransactionsList extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (context) => ReceiptDetailPage(
-                          receiptData: data, // Pass all receipt data
+                          receiptData: data,
                         ),
                       ),
                     );

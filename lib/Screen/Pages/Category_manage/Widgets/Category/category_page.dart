@@ -3,14 +3,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cool_alert/cool_alert.dart';
-import 'package:run_android/Screen/Pages/Category_manage/Widgets/Categoty/edit_category_dialog.dart';
+import 'package:run_android/Screen/Pages/Category_manage/Widgets/Category/edit_category_dialog.dart';
 import 'package:run_android/Screen/Pages/Category_manage/Widgets/Receipt/all_receipt_page.dart';
-import 'package:run_android/Screen/Pages/Category_manage/Widgets/Categoty/category_card.dart';
+import 'package:run_android/Screen/Pages/Category_manage/Widgets/Category/category_card.dart';
 import 'package:run_android/Screen/Pages/Category_manage/Widgets/Receipt/receipt_list_page.dart';
-import 'package:run_android/Screen/Pages/Category_manage/Widgets/Categoty/search_bar.dart';
-import 'package:run_android/Screen/Pages/Category_manage/Widgets/Categoty/sort_options.dart';
-import 'package:run_android/Screen/Pages/Category_manage/Widgets/Categoty/statistics_card.dart';
-import 'package:run_android/Screen/Pages/Category_manage/Widgets/Categoty/add_category_dialog.dart';
+import 'package:run_android/Screen/Pages/Category_manage/Widgets/Category/search_bar.dart';
+import 'package:run_android/Screen/Pages/Category_manage/Widgets/Category/sort_options.dart';
+import 'package:run_android/Screen/Pages/Category_manage/Widgets/Category/statistics_card.dart';
+import 'package:run_android/Screen/Pages/Category_manage/Widgets/Category/add_category_dialog.dart';
 
 
 import 'package:run_android/models/category_model.dart';

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:run_android/Screen/Pages/HomePage/home_page.dart';
 import 'package:run_android/Screen/Pages/ReceiptPage.dart/AddReceipt_page.dart';
 import 'package:run_android/Screen/Pages/chat_page.dart';
-import 'package:run_android/Screen/Pages/Category_manage/Widgets/Categoty/category_page.dart';
-import 'package:run_android/Screen/Pages/%E0%B9%87HomePage/home_page.dart';
+import 'package:run_android/Screen/Pages/Category_manage/Widgets/Category/category_page.dart';
 import 'package:run_android/Screen/Pages/ProfilePage/profile_page.dart';
 
 class HomeScreen extends StatefulWidget {

@@ -1,26 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:run_android/Screen/Pages/%E0%B9%87HomePage/category_transactions_page.dart';
+import 'package:google_fonts/google_fonts.dart';
+// ✅ 1. Import โมเดล Category เข้ามา
+import 'package:run_android/models/category_model.dart'; 
+import 'package:run_android/Screen/Pages/HomePage/category_transactions_page.dart';
 
 class CategoriesGridWidget extends StatelessWidget {
-  final List<Map<String, dynamic>> categories;
+  // ✅ 2. เปลี่ยนประเภทของ categories ให้เป็น List<Category>
+  final List<Category> categories;
 
   const CategoriesGridWidget({super.key, required this.categories});
 
-  IconData _getIconData(String? iconName) {
-    // ฟังก์ชันนี้เหมือนเดิม แต่ยกมาไว้ใน Widget ของตัวเอง
-    // (สามารถสร้างเป็นไฟล์ utility แยกต่างหากได้ถ้าใช้ในหลายที่)
-    switch (iconName) {
-      case 'restaurant_menu':
-        return Icons.restaurant_menu;
-      case 'shopping_cart':
-        return Icons.shopping_cart;
-      case 'fastfood':
-        return Icons.fastfood;
-      // ... (เพิ่ม case อื่นๆ ทั้งหมดที่นี่)
-      default:
-        return Icons.category;
-    }
-  }
+  // ❌ 3. ลบฟังก์ชัน _getIconData ที่ซ้ำซ้อนออกทั้งหมด
 
   @override
   Widget build(BuildContext context) {
@@ -36,9 +26,9 @@ class CategoriesGridWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'หมวดหมู่',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: GoogleFonts.prompt(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
           GridView.builder(
@@ -52,18 +42,8 @@ class CategoriesGridWidget extends StatelessWidget {
             ),
             itemCount: categories.length,
             itemBuilder: (context, index) {
+              // ✅ 4. ตอนนี้ 'category' เป็น Object ของ Class Category แล้ว
               final category = categories[index];
-              final categoryName = category['name'] as String? ?? 'ไม่ระบุ';
-              // ✨ ดึง categoryId จาก map
-              final categoryId = category['id'] as String? ?? '';
-              final categoryIcon =
-                  _getIconData(category['iconName'] as String?);
-
-              // ตรวจสอบว่า categoryId ไม่ใช่ค่าว่าง
-              if (categoryId.isEmpty) {
-                // อาจจะแสดงเป็น widget ที่กดไม่ได้ หรือซ่อนไปเลย
-                return const SizedBox.shrink();
-              }
 
               return GestureDetector(
                 onTap: () {
@@ -71,9 +51,9 @@ class CategoriesGridWidget extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (context) => CategoryTransactionsPage(
-                        // ✨ ส่งทั้ง categoryId และ categoryName ไปด้วย
-                        categoryId: categoryId,
-                        categoryName: categoryName,
+                        // ✅ 5. เรียกใช้ property จาก object ได้โดยตรง
+                        categoryId: category.id,
+                        categoryName: category.name,
                       ),
                     ),
                   );
@@ -83,13 +63,14 @@ class CategoriesGridWidget extends StatelessWidget {
                     CircleAvatar(
                       radius: 28,
                       backgroundColor: Colors.blue.withOpacity(0.1),
-                      child: Icon(categoryIcon, color: Colors.blue),
+                      // ✅ 6. ใช้ category.icon ได้เลย เพราะเป็น IconData อยู่แล้ว
+                      child: Icon(category.icon, color: Colors.blue),
                     ),
                     const SizedBox(height: 5),
                     Text(
-                      categoryName,
+                      category.name, // ✅ เรียกใช้ property ได้โดยตรง
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 12),
+                      style: GoogleFonts.prompt(fontSize: 12),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:run_android/Screen/Pages/Category_manage/Widgets/Categoty/category_card.dart';
+import 'package:run_android/Screen/Pages/Category_manage/Widgets/Category/category_card.dart';
 import 'package:run_android/Screen/Pages/Category_manage/Widgets/Receipt/all_receipt_page.dart';
 import 'package:run_android/Screen/Pages/Category_manage/Widgets/Receipt/receipt_list_page.dart';
 import 'package:run_android/models/category_model.dart';

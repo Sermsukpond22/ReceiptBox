@@ -16,7 +16,7 @@ class CategoryTransactionsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ✨ 3. ไม่ต้องสร้าง Scaffold ใหม่ เพราะ ReceiptList มี Scaffold ของตัวเองอยู่แล้ว
+    //  3. ไม่ต้องสร้าง Scaffold ใหม่ เพราะ ReceiptList มี Scaffold ของตัวเองอยู่แล้ว
     //    เราเพียงแค่ส่งค่าที่จำเป็น (categoryId, categoryName) ไปให้มันก็พอ
     return ReceiptList(
       categoryId: categoryId,
